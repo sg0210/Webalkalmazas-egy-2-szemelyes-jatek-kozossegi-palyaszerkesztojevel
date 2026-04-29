@@ -13,6 +13,14 @@ const sizes = {
 
 const speedDown = 150;
 
+function calculateCordinateX(x) {
+  return Math.round(x / sizes.tileSize)
+}
+  
+function calculateCordinateY(y) {
+  return Math.round(y / sizes.tileSize)
+}
+
 class GameScene extends Phaser.Scene {
   constructor() {
     super("scene-game")
@@ -177,6 +185,8 @@ class GameScene extends Phaser.Scene {
     // player mozgatása billentyűkkel
     this.cursor = this.input.keyboard.createCursorKeys()
     this.keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E)
+
+
   }
   update() {
 
@@ -195,102 +205,17 @@ class GameScene extends Phaser.Scene {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyE) && this.bomb) {
-      if (this.bomb) {
-        for (let i = 0; i < sizes.explosionSize; i++) {
-          if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 1 && i !== 0) {
-            if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 2) {
-              this.destroyedBlocks.getChildren().forEach(block => {
-                if (block.x === Math.round(this.bomb.x / sizes.tileSize) * sizes.tileSize && block.y === (Math.round(this.bomb.y / sizes.tileSize) + i + 1) * sizes.tileSize) {
-                  block.destroy()
-                }
-              })
-            }
-            this.explosion = this.physics.add.sprite(this.bomb.x * i, this.bomb.y * i, 'explosion', 2).setOrigin(0, 0)
-            break
-          } else if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 1 && i === 0) {
-            break
-          } else {
-            if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 2) {
-              this.destroyedBlocks.getChildren().forEach(block => {
-                if (block.x === Math.round(this.bomb.x / sizes.tileSize) * sizes.tileSize && block.y === (Math.round(this.bomb.y / sizes.tileSize) + i + 1) * sizes.tileSize) {
-                  block.destroy()
-                }
-              })
-            }
-            this.explosion = this.physics.add.sprite(this.bomb.x * i, this.bomb.y * i, 'explosion', 0).setOrigin(0, 0)
+      
+      if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) + 1] === 2) {
+        this.destroyedBlocks.getChildren().forEach(block => {
+          if (block.x === (calculateCordinateX(this.bomb.x) + 1) * sizes.tileSize && block.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+            block.destroy()
           }
-          if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) - i - 1][Math.round(this.bomb.x / sizes.tileSize)] === 1 && i !== 0) {
-            if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 2) {
-              this.destroyedBlocks.getChildren().forEach(block => {
-                if (block.x === Math.round(this.bomb.x / sizes.tileSize) * sizes.tileSize && block.y === (Math.round(this.bomb.y / sizes.tileSize) + i + 1) * sizes.tileSize) {
-                  block.destroy()
-                }
-              })
-            }
-            this.explosion = this.physics.add.sprite(this.bomb.x * i, this.bomb.y * i, 'explosion', 2).setOrigin(0, 0)
-            break
-          } else if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) - i - 1][Math.round(this.bomb.x / sizes.tileSize)] === 1 && i === 0) {
-            break
-          } else {
-            if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 2) {
-              this.destroyedBlocks.getChildren().forEach(block => {
-                if (block.x === Math.round(this.bomb.x / sizes.tileSize) * sizes.tileSize && block.y === (Math.round(this.bomb.y / sizes.tileSize) + i + 1) * sizes.tileSize) {
-                  block.destroy()
-                }
-              })
-            }
-            this.explosion = this.physics.add.sprite(this.bomb.x * i, this.bomb.y * i, 'explosion', 0).setOrigin(0, 0)
-          }
-          if (this.mapData[Math.round(this.bomb.y / sizes.tileSize)][Math.round(this.bomb.x / sizes.tileSize) + i + 1] === 1 && i !== 0) {
-            if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 2) {
-              this.destroyedBlocks.getChildren().forEach(block => {
-                if (block.x === Math.round(this.bomb.x / sizes.tileSize) * sizes.tileSize && block.y === (Math.round(this.bomb.y / sizes.tileSize) + i + 1) * sizes.tileSize) {
-                  block.destroy()
-                }
-              })
-            }
-            this.explosion = this.physics.add.sprite(this.bomb.x * i, this.bomb.y * i, 'explosion', 2).setOrigin(0, 0)
-            break
-          } else if (this.mapData[Math.round(this.bomb.y / sizes.tileSize)][Math.round(this.bomb.x / sizes.tileSize) - i - 1] === 1 && i === 0) {
-            break
-          } else {
-            if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 2) {
-              this.destroyedBlocks.getChildren().forEach(block => {
-                if (block.x === Math.round(this.bomb.x / sizes.tileSize) * sizes.tileSize && block.y === (Math.round(this.bomb.y / sizes.tileSize) + i + 1) * sizes.tileSize) {
-                  block.destroy()
-                }
-              })
-            }
-            this.explosion = this.physics.add.sprite(this.bomb.x * i, this.bomb.y * i, 'explosion', 0).setOrigin(0, 0)
-          }
-          if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 1 && i !== 0) {
-            if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 2) {
-              this.destroyedBlocks.getChildren().forEach(block => {
-                if (block.x === Math.round(this.bomb.x / sizes.tileSize) * sizes.tileSize && block.y === (Math.round(this.bomb.y / sizes.tileSize) + i + 1) * sizes.tileSize) {
-                  block.destroy()
-                }
-              })
-            }
-            this.explosion = this.physics.add.sprite(this.bomb.x * i, this.bomb.y * i, 'explosion', 2).setOrigin(0, 0)
-            break
-          } else if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 1 && i === 0) {
-            break
-          } else {
-            if (this.mapData[Math.round(this.bomb.y / sizes.tileSize) + i + 1][Math.round(this.bomb.x / sizes.tileSize)] === 2) {
-              this.destroyedBlocks.getChildren().forEach(block => {
-                if (block.x === Math.round(this.bomb.x / sizes.tileSize) * sizes.tileSize && block.y === (Math.round(this.bomb.y / sizes.tileSize) + i + 1) * sizes.tileSize) {
-                  block.destroy()
-                }
-              })
-            }
-            this.explosion = this.physics.add.sprite(this.bomb.x * i, this.bomb.y * i, 'explosion', 0).setOrigin(0, 0)
-          }
-        }
-        this.explosion.body.allowGravity = false
-        this.explosion.body.setImmovable(true)
-        this.bomb.destroy()
-        this.bomb = null
+        this.explosion = this.add.sprite((calculateCordinateX(this.bomb.x) + 1) * sizes.tileSize, calculateCordinateY(this.bomb.y) * sizes.tileSize, 'explosion', 0).setOrigin(0, 0)  
+        })
       }
+      this.bomb.destroy()
+      this.bomb = null
     }
 
     if (this.cursor.left.isDown) {
