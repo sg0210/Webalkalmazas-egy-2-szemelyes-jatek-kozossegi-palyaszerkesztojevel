@@ -161,10 +161,18 @@ class GameScene extends Phaser.Scene {
       repeat:-1
     }
 
+    const explosion = {
+      key:"explosion",
+      frames: this.anims.generateFrameNumbers("explosion", {frames:[1,0,2]}),
+      frameRate:3,
+      repeat:-1
+    }
+
     this.anims.create(walkUp)
     this.anims.create(walkDown)
     this.anims.create(walkLeft)
     this.anims.create(walkRight)
+    this.anims.create(explosion)
 
     this.scoreText = this.add.text(10, 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
 
@@ -174,11 +182,11 @@ class GameScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true)
 
     //player hitbox a tile-okhoz igazítása
-    this.player.body.setSize(30, 30)
-    this.player.body.setOffset(1, 1)
+    this.player.body.setSize(24, 24)
+    this.player.body.setOffset(4, 4)
     
     // player és tile-ek közötti ütközés
-    this.player.body.setCircle(15)
+    this.player.body.setCircle(13)
     this.physics.add.collider(this.player, blocklayer)
     this.physics.add.collider(this.player, this.destroyedBlocks)
 
@@ -204,16 +212,77 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keyE) && this.bomb) {
+    if (Phaser.Input.Keyboard.JustDown(this.keyE) && this.bomb ) {
       
-      if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) + 1] === 2) {
-        this.destroyedBlocks.getChildren().forEach(block => {
-          if (block.x === (calculateCordinateX(this.bomb.x) + 1) * sizes.tileSize && block.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+      this.explosion = this.add.group()
+
+      this.explosion.create(this.bomb.x, this.bomb.y, 'explosion', 1).setOrigin(0, 0)
+      this.explosion.getChildren().forEach(explosion => {
+        if(explosion.x === this.bomb.x && explosion.y === this.bomb.y) {
+          explosion.anims.play("explosion", true)
+        }
+      })
+
+      //robbanások létrehozása a bomba körül a megadott méretig, amíg nem ütköznek falba
+      //jobb oldal
+      for (let i = 1; i < sizes.explosionSize; i++) {
+        if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) + i] === 2) {
+          this.destroyedBlocks.getChildren().forEach(block => {
+            if (block.x === (calculateCordinateX(this.bomb.x) + i) * sizes.tileSize && block.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
             block.destroy()
-          }
-        this.explosion = this.add.sprite((calculateCordinateX(this.bomb.x) + 1) * sizes.tileSize, calculateCordinateY(this.bomb.y) * sizes.tileSize, 'explosion', 0).setOrigin(0, 0)  
-        })
+            }
+          })
+          this.explosion.create((calculateCordinateX(this.bomb.x) + i) * sizes.tileSize, calculateCordinateY(this.bomb.y) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+          this.explosion.getChildren().forEach(explosion => {
+          if(explosion.x === (calculateCordinateX(this.bomb.x) + i) * sizes.tileSize && explosion.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+            explosion.anims.play("explosion", true)
+            }
+          })
+        }
+        else if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) + i] === 0) {
+            this.explosion.create((calculateCordinateX(this.bomb.x) + i) * sizes.tileSize, calculateCordinateY(this.bomb.y) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+            this.explosion.getChildren().forEach(explosion => {
+              if(explosion.x === (calculateCordinateX(this.bomb.x) + i) * sizes.tileSize && explosion.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+                explosion.anims.play("explosion", true)
+              }
+            })
+        }
+        else { break }
+
+        //bal oldal
+        if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) - i] === 2) {
+          this.destroyedBlocks.getChildren().forEach(block => {
+            if (block.x === (calculateCordinateX(this.bomb.x) - i) * sizes.tileSize && block.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+            block.destroy()
+            }
+          })
+          this.explosion.create((calculateCordinateX(this.bomb.x) - i) * sizes.tileSize, calculateCordinateY(this.bomb.y) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+          this.explosion.getChildren().forEach(explosion => {
+          if(explosion.x === (calculateCordinateX(this.bomb.x) - i) * sizes.tileSize && explosion.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+            explosion.anims.play("explosion", true)
+            }
+          })
+        }
+        else if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) - i] === 0) {
+            this.explosion.create((calculateCordinateX(this.bomb.x) - i) * sizes.tileSize, calculateCordinateY(this.bomb.y) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+            this.explosion.getChildren().forEach(explosion => {
+              if(explosion.x === (calculateCordinateX(this.bomb.x) - i) * sizes.tileSize && explosion.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+                explosion.anims.play("explosion", true)
+              }
+            })
+        }
+        else { break }
+
+        //lefelé
+        //bal oldal
+        
       }
+    
+      setTimeout(() => {this.explosion.getChildren().slice().forEach(explosion => {
+        explosion.destroy()
+      })}, 800)
+      
+
       this.bomb.destroy()
       this.bomb = null
     }
