@@ -5,10 +5,11 @@ import Phaser, { Physics } from 'phaser'
 
 const sizes = {
   screenWidth:512,
-  screenHeight:512,
+  screenHeight:544,
   tileSize:32,
   mapSize:16,
-  explosionSize:7
+  explosionSize:4,
+  hudHeight:32
 }
 
 const speedDown = 150;
@@ -97,11 +98,11 @@ class GameScene extends Phaser.Scene {
 
     mapData.forEach((row, y) => {
       row.forEach((tile, x) => {
-        if (tile === 1) { blocklayer.putTileAt(tile, x, y) }
+        if (tile === 1) { blocklayer.putTileAt(tile, x, y + 1) }
         else if (tile === 2) {
-          bgLayer.putTileAt(0, x, y)
-          this.destroyedBlocks.create(x * sizes.tileSize, y * sizes.tileSize, 'tiles', tile).setOrigin(0, 0).refreshBody()} 
-        else { bgLayer.putTileAt(0, x, y) }
+          bgLayer.putTileAt(0, x, y + 1)
+          this.destroyedBlocks.create(x * sizes.tileSize, (y + 1) * sizes.tileSize, 'tiles', tile).setOrigin(0, 0).refreshBody()} 
+        else { bgLayer.putTileAt(0, x, y + 1) }
       })
     })
     
@@ -194,6 +195,9 @@ class GameScene extends Phaser.Scene {
     this.cursor = this.input.keyboard.createCursorKeys()
     this.keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E)
 
+    //explosion
+    this.isExplosionPlaying = false
+
 
   }
   update() {
@@ -202,7 +206,7 @@ class GameScene extends Phaser.Scene {
 
     const {left, right, up, down, space} = this.cursor
 
-    if (this.cursor.space.isDown) {
+    if (this.cursor.space.isDown && !this.bomb && this.isExplosionPlaying == false) {
       if (!this.bomb) {
         this.bomb = this.physics.add.sprite(Math.round(this.player.x / sizes.tileSize)*sizes.tileSize, Math.round(this.player.y / sizes.tileSize)*sizes.tileSize, 'bomb', 0).setOrigin(0, 0)
         this.bomb.body.allowGravity = false
@@ -212,9 +216,11 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keyE) && this.bomb ) {
+    if (Phaser.Input.Keyboard.JustDown(this.keyE) && this.bomb) {
       
       this.explosion = this.add.group()
+
+      this.isExplosionPlaying = true
 
       this.explosion.create(this.bomb.x, this.bomb.y, 'explosion', 1).setOrigin(0, 0)
       this.explosion.getChildren().forEach(explosion => {
@@ -224,7 +230,7 @@ class GameScene extends Phaser.Scene {
       })
 
       //robbanások létrehozása a bomba körül a megadott méretig, amíg nem ütköznek falba
-      //jobb oldal
+      //x kordináta növelése
       for (let i = 1; i < sizes.explosionSize; i++) {
         if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) + i] === 2) {
           this.destroyedBlocks.getChildren().forEach(block => {
@@ -247,9 +253,11 @@ class GameScene extends Phaser.Scene {
               }
             })
         }
-        else { break }
+        else { break }   
+      }
 
-        //bal oldal
+      //x kordináta csökkentése
+      for (let i = 1; i < sizes.explosionSize; i++) {
         if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) - i] === 2) {
           this.destroyedBlocks.getChildren().forEach(block => {
             if (block.x === (calculateCordinateX(this.bomb.x) - i) * sizes.tileSize && block.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
@@ -272,16 +280,66 @@ class GameScene extends Phaser.Scene {
             })
         }
         else { break }
+      }
 
-        //lefelé
-        //bal oldal
-        
+      //y kordináta növelése
+      for (let i = 1; i < sizes.explosionSize; i++) {
+        if (this.mapData[calculateCordinateY(this.bomb.y) + i][calculateCordinateX(this.bomb.x)] === 2) {
+          this.destroyedBlocks.getChildren().forEach(block => {
+            if (block.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && block.y === (calculateCordinateY(this.bomb.y) + i) * sizes.tileSize) {
+            block.destroy()
+            }
+          })
+          this.explosion.create(calculateCordinateX(this.bomb.x) * sizes.tileSize, (calculateCordinateY(this.bomb.y) + i) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+          this.explosion.getChildren().forEach(explosion => {
+          if(explosion.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && explosion.y === (calculateCordinateY(this.bomb.y) + i) * sizes.tileSize) {
+            explosion.anims.play("explosion", true)
+            }
+          })
+        }
+        else if (this.mapData[calculateCordinateY(this.bomb.y) + i][calculateCordinateX(this.bomb.x)] === 0) {
+            this.explosion.create(calculateCordinateX(this.bomb.x) * sizes.tileSize, (calculateCordinateY(this.bomb.y) + i) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+            this.explosion.getChildren().forEach(explosion => {
+              if(explosion.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && explosion.y === (calculateCordinateY(this.bomb.y) + i) * sizes.tileSize) {
+                explosion.anims.play("explosion", true)
+              }
+            })
+        }
+        else { break }
+      }
+
+      //y kordináta csökkentése
+      for (let i = 1; i < sizes.explosionSize; i++) {
+        if (this.mapData[calculateCordinateY(this.bomb.y) - i][calculateCordinateX(this.bomb.x)] === 2) {
+          this.destroyedBlocks.getChildren().forEach(block => {
+            if (block.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && block.y === (calculateCordinateY(this.bomb.y) - i) * sizes.tileSize) {
+            block.destroy()
+            }
+          })
+          this.explosion.create(calculateCordinateX(this.bomb.x) * sizes.tileSize, (calculateCordinateY(this.bomb.y) - i) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+          this.explosion.getChildren().forEach(explosion => {
+          if(explosion.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && explosion.y === (calculateCordinateY(this.bomb.y) - i) * sizes.tileSize) {
+            explosion.anims.play("explosion", true)
+            }
+          })
+        }
+        else if (this.mapData[calculateCordinateY(this.bomb.y) - i][calculateCordinateX(this.bomb.x)] === 0) {
+            this.explosion.create(calculateCordinateX(this.bomb.x) * sizes.tileSize, (calculateCordinateY(this.bomb.y) - i) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+            this.explosion.getChildren().forEach(explosion => {
+              if(explosion.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && explosion.y === (calculateCordinateY(this.bomb.y) - i) * sizes.tileSize) {
+                explosion.anims.play("explosion", true)
+              }
+            })
+        }
+        else { break }
       }
     
-      setTimeout(() => {this.explosion.getChildren().slice().forEach(explosion => {
+      setTimeout(() => {
+        this.explosion.getChildren().slice().forEach(explosion => {
         explosion.destroy()
-      })}, 800)
-      
+        })
+        this.isExplosionPlaying = false
+      }, 800)
 
       this.bomb.destroy()
       this.bomb = null
