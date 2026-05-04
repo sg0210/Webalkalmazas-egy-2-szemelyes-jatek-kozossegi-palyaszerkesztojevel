@@ -5,11 +5,11 @@ import Phaser, { Physics } from 'phaser'
 
 const sizes = {
   screenWidth:512,
-  screenHeight:544,
+  screenHeight:512 + 50,
   tileSize:32,
   mapSize:16,
   explosionSize:4,
-  hudHeight:32
+  hudHeight:50
 }
 
 const speedDown = 150;
@@ -19,7 +19,19 @@ function calculateCordinateX(x) {
 }
   
 function calculateCordinateY(y) {
-  return Math.round(y / sizes.tileSize)
+  return Math.round((y - sizes.hudHeight) / sizes.tileSize)
+}
+
+function calculateCordinateXpx(x) {
+  return x * sizes.tileSize
+}
+  
+function calculateCordinateYpx(y) {
+  return y * sizes.tileSize + sizes.hudHeight
+}
+
+function playertHit(hp) {
+  return hp--
 }
 
 class GameScene extends Phaser.Scene {
@@ -31,6 +43,8 @@ class GameScene extends Phaser.Scene {
     this.bomb
     this.destroyedBlocks
     this.explosion
+    this.playerHP = 3
+    this.playerOrangeHPText
   }
 
   preload() {
@@ -49,7 +63,7 @@ class GameScene extends Phaser.Scene {
     // Player sprite
     this.load.spritesheet('player', 'assets/player_movement.png', {
       frameWidth: sizes.tileSize,
-      frameHeight: sizes.tileSize
+      frameHeight: sizes.tileSize,
     })
 
     //Robbanás effect
@@ -91,18 +105,18 @@ class GameScene extends Phaser.Scene {
 
     const tileset = map.addTilesetImage('tiles', 'tiles')
 
-    const bgLayer = map.createBlankLayer('bg', tileset)
-    const blocklayer = map.createBlankLayer('block', tileset)
+    const bgLayer = map.createBlankLayer('bg', tileset, 0, sizes.hudHeight)
+    const blocklayer = map.createBlankLayer('block', tileset, 0, sizes.hudHeight)
 
     this.destroyedBlocks = this.physics.add.staticGroup()
 
     mapData.forEach((row, y) => {
       row.forEach((tile, x) => {
-        if (tile === 1) { blocklayer.putTileAt(tile, x, y + 1) }
+        if (tile === 1) { blocklayer.putTileAt(tile, x, y) }
         else if (tile === 2) {
-          bgLayer.putTileAt(0, x, y + 1)
-          this.destroyedBlocks.create(x * sizes.tileSize, (y + 1) * sizes.tileSize, 'tiles', tile).setOrigin(0, 0).refreshBody()} 
-        else { bgLayer.putTileAt(0, x, y + 1) }
+          bgLayer.putTileAt(0, x, y)
+          this.destroyedBlocks.create(calculateCordinateXpx(x) , calculateCordinateYpx(y), 'tiles', tile).setOrigin(0, 0).refreshBody()} 
+        else { bgLayer.putTileAt(0, x, y) }
       })
     })
     
@@ -116,20 +130,20 @@ class GameScene extends Phaser.Scene {
 
     switch (playerStartCorner) {
       case 0: // top-left
-        playerStartX = 1 * sizes.tileSize
-        playerStartY = 1 * sizes.tileSize
+        playerStartX = 1
+        playerStartY = 1
         break
       case 1: // top-right
-        playerStartX = (sizes.mapSize-2) * sizes.tileSize
-        playerStartY = 1 * sizes.tileSize
+        playerStartX = sizes.mapSize-2
+        playerStartY = 1
         break
       case 2: // bottom-left
-        playerStartX = 1 * sizes.tileSize
-        playerStartY = (sizes.mapSize-2) * sizes.tileSize
+        playerStartX = 1
+        playerStartY = sizes.mapSize-2
         break
       case 3: // bottom-right
-        playerStartX = (sizes.mapSize-2) * sizes.tileSize
-        playerStartY = (sizes.mapSize-2) * sizes.tileSize
+        playerStartX = sizes.mapSize-2
+        playerStartY = sizes.mapSize-2
         break 
     }
 
@@ -175,10 +189,16 @@ class GameScene extends Phaser.Scene {
     this.anims.create(walkRight)
     this.anims.create(explosion)
 
-    this.scoreText = this.add.text(10, 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
+    //kordinátáék számolása
+    this.scoreText = this.add.text(10, sizes.hudHeight + 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
+
+    //HUD HP and timer
+    this.playerOrangeHPText = this.add.text(5, 5, "Player 1 HP: 3", {font: "16px Arial", fill: "#ffffff" })
+    this.timerText = this.add.text(sizes.screenWidth / 2, 5, "3:00", {font: "16px Arial", fill: "#ffffff" })
+    this.playerBlueHPText = this.add.text(sizes.screenWidth - (this.playerOrangeHPText.width + 5), 5, "Player 2 HP: 3", {font: "16px Arial", fill: "#ffffff" })
 
     //player létrehozása
-    this.player = this.physics.add.sprite(playerStartX, playerStartY, 'player', 0).setOrigin(0, 0)
+    this.player = this.physics.add.sprite(calculateCordinateXpx(playerStartX), calculateCordinateYpx(playerStartY), 'player', 4).setOrigin(0, 0)
     this.player.body.allowGravity = false
     this.player.setCollideWorldBounds(true)
 
@@ -208,7 +228,7 @@ class GameScene extends Phaser.Scene {
 
     if (this.cursor.space.isDown && !this.bomb && this.isExplosionPlaying == false) {
       if (!this.bomb) {
-        this.bomb = this.physics.add.sprite(Math.round(this.player.x / sizes.tileSize)*sizes.tileSize, Math.round(this.player.y / sizes.tileSize)*sizes.tileSize, 'bomb', 0).setOrigin(0, 0)
+        this.bomb = this.physics.add.sprite(calculateCordinateXpx(calculateCordinateX(this.player.x)), calculateCordinateYpx(calculateCordinateY(this.player.y)), 'bomb', 0).setOrigin(0, 0)
         this.bomb.body.allowGravity = false
         this.bomb.body.setImmovable(true)
         this.bomb.setCollideWorldBounds(true)
@@ -234,21 +254,21 @@ class GameScene extends Phaser.Scene {
       for (let i = 1; i < sizes.explosionSize; i++) {
         if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) + i] === 2) {
           this.destroyedBlocks.getChildren().forEach(block => {
-            if (block.x === (calculateCordinateX(this.bomb.x) + i) * sizes.tileSize && block.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+            if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x) + i) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
             block.destroy()
             }
           })
-          this.explosion.create((calculateCordinateX(this.bomb.x) + i) * sizes.tileSize, calculateCordinateY(this.bomb.y) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+          this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x) + i), calculateCordinateYpx(calculateCordinateY(this.bomb.y)), 'explosion', 1).setOrigin(0, 0)
           this.explosion.getChildren().forEach(explosion => {
-          if(explosion.x === (calculateCordinateX(this.bomb.x) + i) * sizes.tileSize && explosion.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+          if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) + i && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
             explosion.anims.play("explosion", true)
             }
           })
         }
         else if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) + i] === 0) {
-            this.explosion.create((calculateCordinateX(this.bomb.x) + i) * sizes.tileSize, calculateCordinateY(this.bomb.y) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+            this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x) + i), calculateCordinateYpx(calculateCordinateY(this.bomb.y)), 'explosion', 1).setOrigin(0, 0)
             this.explosion.getChildren().forEach(explosion => {
-              if(explosion.x === (calculateCordinateX(this.bomb.x) + i) * sizes.tileSize && explosion.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+              if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) + i && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
                 explosion.anims.play("explosion", true)
               }
             })
@@ -260,21 +280,21 @@ class GameScene extends Phaser.Scene {
       for (let i = 1; i < sizes.explosionSize; i++) {
         if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) - i] === 2) {
           this.destroyedBlocks.getChildren().forEach(block => {
-            if (block.x === (calculateCordinateX(this.bomb.x) - i) * sizes.tileSize && block.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+            if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x) - i) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
             block.destroy()
             }
           })
-          this.explosion.create((calculateCordinateX(this.bomb.x) - i) * sizes.tileSize, calculateCordinateY(this.bomb.y) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+          this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x) - i), calculateCordinateYpx(calculateCordinateY(this.bomb.y)), 'explosion', 1).setOrigin(0, 0)
           this.explosion.getChildren().forEach(explosion => {
-          if(explosion.x === (calculateCordinateX(this.bomb.x) - i) * sizes.tileSize && explosion.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+          if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) - i && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
             explosion.anims.play("explosion", true)
             }
           })
         }
         else if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) - i] === 0) {
-            this.explosion.create((calculateCordinateX(this.bomb.x) - i) * sizes.tileSize, calculateCordinateY(this.bomb.y) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+            this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x) - i), calculateCordinateYpx(calculateCordinateY(this.bomb.y)), 'explosion', 1).setOrigin(0, 0)
             this.explosion.getChildren().forEach(explosion => {
-              if(explosion.x === (calculateCordinateX(this.bomb.x) - i) * sizes.tileSize && explosion.y === calculateCordinateY(this.bomb.y) * sizes.tileSize) {
+              if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) - i && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
                 explosion.anims.play("explosion", true)
               }
             })
@@ -286,21 +306,21 @@ class GameScene extends Phaser.Scene {
       for (let i = 1; i < sizes.explosionSize; i++) {
         if (this.mapData[calculateCordinateY(this.bomb.y) + i][calculateCordinateX(this.bomb.x)] === 2) {
           this.destroyedBlocks.getChildren().forEach(block => {
-            if (block.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && block.y === (calculateCordinateY(this.bomb.y) + i) * sizes.tileSize) {
+            if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y) + i)) {
             block.destroy()
             }
           })
-          this.explosion.create(calculateCordinateX(this.bomb.x) * sizes.tileSize, (calculateCordinateY(this.bomb.y) + i) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+          this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x)), calculateCordinateYpx(calculateCordinateY(this.bomb.y) + i), 'explosion', 1).setOrigin(0, 0)
           this.explosion.getChildren().forEach(explosion => {
-          if(explosion.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && explosion.y === (calculateCordinateY(this.bomb.y) + i) * sizes.tileSize) {
+          if(explosion.x === calculateCordinateX(this.bomb.x) && explosion.y === calculateCordinateY(this.bomb.y) + i) {
             explosion.anims.play("explosion", true)
             }
           })
         }
         else if (this.mapData[calculateCordinateY(this.bomb.y) + i][calculateCordinateX(this.bomb.x)] === 0) {
-            this.explosion.create(calculateCordinateX(this.bomb.x) * sizes.tileSize, (calculateCordinateY(this.bomb.y) + i) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+            this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x)), calculateCordinateYpx(calculateCordinateY(this.bomb.y) + i), 'explosion', 1).setOrigin(0, 0)
             this.explosion.getChildren().forEach(explosion => {
-              if(explosion.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && explosion.y === (calculateCordinateY(this.bomb.y) + i) * sizes.tileSize) {
+              if(explosion.x === calculateCordinateX(this.bomb.x) && explosion.y === calculateCordinateY(this.bomb.y) + i) {
                 explosion.anims.play("explosion", true)
               }
             })
@@ -312,21 +332,21 @@ class GameScene extends Phaser.Scene {
       for (let i = 1; i < sizes.explosionSize; i++) {
         if (this.mapData[calculateCordinateY(this.bomb.y) - i][calculateCordinateX(this.bomb.x)] === 2) {
           this.destroyedBlocks.getChildren().forEach(block => {
-            if (block.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && block.y === (calculateCordinateY(this.bomb.y) - i) * sizes.tileSize) {
+            if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y) - i)) {
             block.destroy()
             }
           })
-          this.explosion.create(calculateCordinateX(this.bomb.x) * sizes.tileSize, (calculateCordinateY(this.bomb.y) - i) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+          this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x)), calculateCordinateYpx(calculateCordinateY(this.bomb.y) - i), 'explosion', 1).setOrigin(0, 0)
           this.explosion.getChildren().forEach(explosion => {
-          if(explosion.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && explosion.y === (calculateCordinateY(this.bomb.y) - i) * sizes.tileSize) {
+          if(explosion.x === calculateCordinateX(this.bomb.x) && explosion.y === calculateCordinateY(this.bomb.y) - i) {
             explosion.anims.play("explosion", true)
             }
           })
         }
         else if (this.mapData[calculateCordinateY(this.bomb.y) - i][calculateCordinateX(this.bomb.x)] === 0) {
-            this.explosion.create(calculateCordinateX(this.bomb.x) * sizes.tileSize, (calculateCordinateY(this.bomb.y) - i) * sizes.tileSize, 'explosion', 1).setOrigin(0, 0)
+            this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x)), calculateCordinateYpx(calculateCordinateY(this.bomb.y) - i), 'explosion', 1).setOrigin(0, 0)
             this.explosion.getChildren().forEach(explosion => {
-              if(explosion.x === calculateCordinateX(this.bomb.x) * sizes.tileSize && explosion.y === (calculateCordinateY(this.bomb.y) - i) * sizes.tileSize) {
+              if(explosion.x === calculateCordinateX(this.bomb.x) && explosion.y === calculateCordinateY(this.bomb.y) - i) {
                 explosion.anims.play("explosion", true)
               }
             })
@@ -336,7 +356,8 @@ class GameScene extends Phaser.Scene {
     
       setTimeout(() => {
         this.explosion.getChildren().slice().forEach(explosion => {
-        explosion.destroy()
+          if (calculateCordinateX(explosion.x) == calculateCordinateX(this.player.x) && calculateCordinateY(explosion.y) == calculateCordinateY(this.player.y)) {this.playerOrangeHPText.setText(`Player 1 HP: ${playertHit(this.playerHP)}`)}
+          explosion.destroy()
         })
         this.isExplosionPlaying = false
       }, 800)
@@ -367,6 +388,7 @@ class GameScene extends Phaser.Scene {
         this.player.anims.stop();
     }
   }
+
 }
 
 const gameCanvas = document.getElementById('gameCanvas')
