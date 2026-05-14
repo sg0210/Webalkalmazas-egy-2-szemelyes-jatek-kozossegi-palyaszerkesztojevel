@@ -4,13 +4,14 @@ import {GameScene} from "./gameScene"
 import {sizes} from "./gameScene"
 import {speedDown} from "./gameScene"
 import {MapEditor} from "./mapEditor"
+import { MenuScene } from './menuScene'
 
 const config = {
   type:Phaser.WEBGL,
   width: sizes.screenWidth,
   height: sizes.screenHeight,
   canvas: gameCanvas,
-  scene: [MapEditor],
+  scene: [MenuScene, MapEditor, GameScene],
   physics: {
     default: 'arcade',
     arcade: {

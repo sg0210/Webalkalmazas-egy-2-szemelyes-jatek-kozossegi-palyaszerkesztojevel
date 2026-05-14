@@ -9,13 +9,6 @@ export function calculateCordinateSmallerY(y) {
     return Math.floor((y - sizes.hudHeight) / sizes.tileSize)
 }
 
-export function cornerSpawn(x,y) {
-    if ([1,2,13,14].includes(calculateCordinateSmallerX(x)) && [1,2,13,14].includes(calculateCordinateSmallerY(y))){
-        return false
-    }
-    else {return true}
-}
-
 export class MapEditor extends Phaser.Scene {
     constructor() {
         super ("MapEditor")
@@ -115,11 +108,15 @@ export class MapEditor extends Phaser.Scene {
             this.time.delayedCall(150, () => {
                 saveButton.setStyle({backgroundColor: "#333333"})
             })
-        }) 
+        })
+
+        this.keyG = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.G)
     }
 
     update() {
         const pointer = this.input.activePointer
+
+        //console.log(calculateCordinateX(pointer.x),calculateCordinateSmallerY(pointer.y))
 
         if(pointer.isDown){
             this.focus.lineStyle(4, 0xff0000, 1)
@@ -136,7 +133,7 @@ export class MapEditor extends Phaser.Scene {
             }
         }
 
-        if (pointer.isDown && this.follower && cornerSpawn(pointer.x,pointer.y) === true) {
+        if (pointer.isDown && this.follower && this.cornerSpawn(pointer.x,pointer.y) === true && this.sideoftheMap(pointer.x,pointer.y) === true) {
             if(pointer.y > sizes.hudHeight) {
                 this.mapData[calculateCordinateSmallerX(pointer.x), calculateCordinateSmallerY(pointer.y)] = this.follower
                 this.blocklayer.putTileAt(this.follower, calculateCordinateSmallerX(pointer.x), calculateCordinateSmallerY(pointer.y))
@@ -152,9 +149,13 @@ export class MapEditor extends Phaser.Scene {
             this.selectedBlock.y - this.selectedBlock.displayHeight / 2,
             this.selectedBlock.displayWidth,
             this.selectedBlock.displayHeight
-        );
+            );
+        }
 
-    }
+        if (Phaser.Input.Keyboard.JustDown(this.keyG)) {
+            console.log('Megy')
+            this.scene.start('GameScene')
+        }
     }
 
     exportMap() {
@@ -174,4 +175,18 @@ export class MapEditor extends Phaser.Scene {
 
         console.log("Map saved")
     }
+
+    cornerSpawn(x,y) {
+        if ([1,2,13,14].includes(calculateCordinateSmallerX(x)) && [1,2,13,14].includes(calculateCordinateSmallerY(y))){
+            return false
+        }else {return true}
+    }
+
+    sideoftheMap(x,y) {
+        if ([0,15].includes(calculateCordinateSmallerX(x)) || [0,15].includes(calculateCordinateSmallerY(y))){
+            return false
+        }else {return true}
+    }
+
+    
 }
