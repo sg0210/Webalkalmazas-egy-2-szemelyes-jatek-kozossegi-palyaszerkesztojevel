@@ -30,7 +30,8 @@ export function calculateCordinateYpx(y) {
  export class GameScene extends Phaser.Scene {
   constructor() {
     super({key: 'GameScene'})
-    this.player
+    this.playerFirst
+    this.playerSecond
     this.cursor
     this.playerSpeed = speedDown + 50
     this.bomb
@@ -120,25 +121,25 @@ export function calculateCordinateYpx(y) {
 
     //player kezdő pozíciójának üres tile-ra helyezése
     const playerStartCorner = Math.floor(Math.random() * 4)
-    let playerStartX
-    let playerStartY
+    let playerFirstStartX
+    let playerFirstStartY
 
     switch (playerStartCorner) {
       case 0: // top-left
-        playerStartX = 1
-        playerStartY = 1
+        playerFirstStartX = 1
+        playerFirstStartY = 1
         break
       case 1: // top-right
-        playerStartX = sizes.mapSize-2
-        playerStartY = 1
+        playerFirstStartX = sizes.mapSize-2
+        playerFirstStartY = 1
         break
       case 2: // bottom-left
-        playerStartX = 1
-        playerStartY = sizes.mapSize-2
+        playerFirstStartX = 1
+        playerFirstStartY = sizes.mapSize-2
         break
       case 3: // bottom-right
-        playerStartX = sizes.mapSize-2
-        playerStartY = sizes.mapSize-2
+        playerFirstStartX = sizes.mapSize-2
+        playerFirstStartY = sizes.mapSize-2
         break 
     }
 
@@ -185,7 +186,7 @@ export function calculateCordinateYpx(y) {
     this.anims.create(explosion)
 
     //kordinátáék számolása
-    this.scoreText = this.add.text(10, sizes.hudHeight + 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
+    //this.scoreText = this.add.text(10, sizes.hudHeight + 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
 
     //HUD HP and timer
     this.playerOrangeHPText = this.add.text(5, 5, "Player 1 HP: 3", {font: "16px Arial", fill: "#ffffff" })
@@ -194,25 +195,31 @@ export function calculateCordinateYpx(y) {
     //player létrehozása
     this.playerHP = 3
     this.playerHit = undefined
-    this.player = this.physics.add.sprite(calculateCordinateXpx(playerStartX), calculateCordinateYpx(playerStartY), 'player', 4).setOrigin(0, 0)
-    this.player.body.allowGravity = false
-    this.player.setCollideWorldBounds(true)
+    this.playerFirst = this.physics.add.sprite(calculateCordinateXpx(playerFirstStartX), calculateCordinateYpx(playerFirstStartY), 'player', 4).setOrigin(0, 0)
+    this.playerFirst.body.allowGravity = false
+    this.playerFirst.setCollideWorldBounds(true)
 
     //player hitbox a tile-okhoz igazítása
-    this.player.body.setSize(24, 24)
-    this.player.body.setOffset(4, 4)
+    this.playerFirst.body.setSize(24, 24)
+    this.playerFirst.body.setOffset(4, 4)
     
     // player és tile-ek közötti ütközés
-    this.player.body.setCircle(13)
-    this.physics.add.collider(this.player, blocklayer)
-    this.physics.add.collider(this.player, this.destroyedBlocks)
+    this.playerFirst.body.setCircle(13)
+    this.physics.add.collider(this.playerFirst, blocklayer)
+    this.physics.add.collider(this.playerFirst, this.destroyedBlocks)
 
     // player mozgatása billentyűkkel
-    this.cursor = this.input.keyboard.createCursorKeys()
-    this.keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E)
+      //Első játkos
+      this.cursor = this.input.keyboard.createCursorKeys()
+      this.keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E)
+
+      
 
     //explosion
     this.isExplosionPlaying = false
+
+    //Vissza lépni a menube
+    this.keyEsc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
 
 
   }
@@ -224,15 +231,15 @@ export function calculateCordinateYpx(y) {
       this.scene.restart(GameScene)
     }
 
-    this.scoreText.setText(`cordinate x: ${Math.round(this.player.x/sizes.tileSize)} y: ${Math.round(this.player.y/sizes.tileSize)}`)
+    //this.scoreText.setText(`cordinate x: ${Math.round(this.playerFirst.x/sizes.tileSize)} y: ${Math.round(this.playerFirst.y/sizes.tileSize)}`)
 
     if (this.cursor.space.isDown && !this.bomb && this.isExplosionPlaying == false) {
       if (!this.bomb) {
-        this.bomb = this.physics.add.sprite(calculateCordinateXpx(calculateCordinateX(this.player.x)), calculateCordinateYpx(calculateCordinateY(this.player.y)), 'bomb', 0).setOrigin(0, 0)
+        this.bomb = this.physics.add.sprite(calculateCordinateXpx(calculateCordinateX(this.playerFirst.x)), calculateCordinateYpx(calculateCordinateY(this.playerFirst.y)), 'bomb', 0).setOrigin(0, 0)
         this.bomb.body.allowGravity = false
         this.bomb.body.setImmovable(true)
         this.bomb.setCollideWorldBounds(true)
-        this.physics.add.collider(this.player, this.bomb)
+        this.physics.add.collider(this.playerFirst, this.bomb)
       }
     }
 
@@ -240,7 +247,7 @@ export function calculateCordinateYpx(y) {
       
       this.explosion = this.physics.add.group()
       this.isExplosionPlaying = true
-      this.physics.add.overlap(this.player, this.explosion, this.playerExplsoionHit, null, this)
+      this.physics.add.overlap(this.playerFirst, this.explosion, this.playerExplsoionHit, null, this)
        
       this.explosion.create(this.bomb.x, this.bomb.y, 'explosion', 1).setOrigin(0, 0)
       this.explosion.getChildren().forEach(explosion => {
@@ -378,26 +385,30 @@ export function calculateCordinateYpx(y) {
     const {left, right, up, down, space} = this.cursor
 
     if (this.cursor.left.isDown && !this.playerHit) {
-      this.player.anims.play("walkLeft", true);
-      this.player.setVelocityX(-this.playerSpeed);  
+      this.playerFirst.anims.play("walkLeft", true);
+      this.playerFirst.setVelocityX(-this.playerSpeed);  
     } else if (this.cursor.right.isDown && !this.playerHit) {
-      this.player.anims.play("walkRight", true);
-      this.player.setVelocityX(this.playerSpeed);
+      this.playerFirst.anims.play("walkRight", true);
+      this.playerFirst.setVelocityX(this.playerSpeed);
     } else {
-        this.player.setVelocityX(0);
-        this.player.anims.stop();
+        this.playerFirst.setVelocityX(0);
+        this.playerFirst.anims.stop();
     }
 
     if (this.cursor.up.isDown && !this.playerHit) {
-        this.player.setVelocityY(-this.playerSpeed);
-        this.player.anims.play("walkUp", true);
+        this.playerFirst.setVelocityY(-this.playerSpeed);
+        this.playerFirst.anims.play("walkUp", true);
     } else if (this.cursor.down.isDown && !this.playerHit) {
-        this.player.setVelocityY(this.playerSpeed);
-        this.player.anims.play("walkDown", true);
+        this.playerFirst.setVelocityY(this.playerSpeed);
+        this.playerFirst.anims.play("walkDown", true);
     } else {
-        this.player.setVelocityY(0);
-        this.player.anims.stop();
+        this.playerFirst.setVelocityY(0);
+        this.playerFirst.anims.stop();
     }
+
+    if (Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
+            this.scene.start('MenuScene')
+        }
   }
 
 

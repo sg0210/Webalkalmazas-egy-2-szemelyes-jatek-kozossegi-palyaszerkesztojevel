@@ -7,12 +7,13 @@ export class MenuScene extends Phaser.Scene {
     }
 
     preload() {
-
+        this.load.image('bg', 'assets/Mainmenu_background.png')
     }
 
     create() {
-       this.playButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2, 'Start', 'GameScene')
-       this.editorButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 + 75, 'Editor', 'MapEditor')
+        this.add.image(0, 0, 'bg').setOrigin(0).setScale(0.515, 0.525)
+        this.playButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2, 'Start', 'GameScene')
+        this.editorButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 + 75, 'Editor', 'MapEditor')
     }
 
     update() {

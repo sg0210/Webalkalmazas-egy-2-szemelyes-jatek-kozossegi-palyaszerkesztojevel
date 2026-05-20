@@ -110,7 +110,7 @@ export class MapEditor extends Phaser.Scene {
             })
         })
 
-        this.keyG = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.G)
+        this.keyEsc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
     }
 
     update() {
@@ -152,9 +152,8 @@ export class MapEditor extends Phaser.Scene {
             );
         }
 
-        if (Phaser.Input.Keyboard.JustDown(this.keyG)) {
-            console.log('Megy')
-            this.scene.start('GameScene')
+        if (Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
+            this.scene.start('MenuScene')
         }
     }
 
