@@ -37,9 +37,11 @@ export function calculateCordinateYpx(y) {
     this.bomb
     this.destroyedBlocks
     this.explosion
-    this.playerHP
-    this.playerOrangeHPText
-    this.playerHit
+    this.playerFirstHP
+    this.playerFirstHit
+    this.playerFirstBombs
+    this.playerSecondHP
+    this.playerSecondHit
   }
 
   preload() {
@@ -64,6 +66,16 @@ export function calculateCordinateYpx(y) {
 
     //Robbanás effect
     this.load.spritesheet('explosion', 'assets/explosion_animation.png', {
+      frameWidth: sizes.tileSize,
+      frameHeight: sizes.tileSize
+    })
+
+    this.load.spritesheet('hp', 'assets/hp.png', {
+      frameWidth: sizes.tileSize,
+      frameHeight: sizes.tileSize
+    })
+    
+    this.load.spritesheet('bomb_hp', 'assets/bomb_hp.png', {
       frameWidth: sizes.tileSize,
       frameHeight: sizes.tileSize
     })
@@ -123,23 +135,33 @@ export function calculateCordinateYpx(y) {
     const playerStartCorner = Math.floor(Math.random() * 4)
     let playerFirstStartX
     let playerFirstStartY
+    let playerSecondStartX
+    let playerSecondStartY
 
     switch (playerStartCorner) {
       case 0: // top-left
         playerFirstStartX = 1
         playerFirstStartY = 1
+        playerSecondStartX = sizes.mapSize - 2
+        playerSecondStartY = sizes.mapSize - 2
         break
       case 1: // top-right
         playerFirstStartX = sizes.mapSize-2
         playerFirstStartY = 1
+        playerSecondStartX = 1
+        playerSecondStartY = sizes.mapSize - 2
         break
       case 2: // bottom-left
         playerFirstStartX = 1
         playerFirstStartY = sizes.mapSize-2
+        playerSecondStartX = sizes.mapSize - 2
+        playerSecondStartY = 1
         break
       case 3: // bottom-right
         playerFirstStartX = sizes.mapSize-2
         playerFirstStartY = sizes.mapSize-2
+        playerSecondStartX = 1
+        playerSecondStartY = 1
         break 
     }
 
@@ -188,13 +210,20 @@ export function calculateCordinateYpx(y) {
     //kordinátáék számolása
     //this.scoreText = this.add.text(10, sizes.hudHeight + 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
 
-    //HUD HP and timer
-    this.playerOrangeHPText = this.add.text(5, 5, "Player 1 HP: 3", {font: "16px Arial", fill: "#ffffff" })
-    this.playerBlueHPText = this.add.text(sizes.screenWidth - (this.playerOrangeHPText.width + 5), 5, "Player 2 HP: 3", {font: "16px Arial", fill: "#ffffff" })
+    //HUD HP
+    this.playerFirstHP = 3
+    for (let i = 0; i < this.playerFirstHP; i++) {
+      this.add.sprite(5 + i * (sizes.tileSize / 1.5 + 2), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
+    }
+
+    //HUD Bomb
+    this.playerFirstBombs = 3
+    for (let i = 0; i < this.playerFirstBombs; i++) {
+      this.add.sprite(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+    }
 
     //player létrehozása
-    this.playerHP = 3
-    this.playerHit = undefined
+    this.playerFirstHit = undefined
     this.playerFirst = this.physics.add.sprite(calculateCordinateXpx(playerFirstStartX), calculateCordinateYpx(playerFirstStartY), 'player', 4).setOrigin(0, 0)
     this.playerFirst.body.allowGravity = false
     this.playerFirst.setCollideWorldBounds(true)
@@ -225,7 +254,7 @@ export function calculateCordinateYpx(y) {
   }
   update() {
 
-    if (this.playerHP === 0)
+    if (this.playerFirstHP === 0)
     {
       this.gameOver()
       this.scene.restart(GameScene)
@@ -233,7 +262,7 @@ export function calculateCordinateYpx(y) {
 
     //this.scoreText.setText(`cordinate x: ${Math.round(this.playerFirst.x/sizes.tileSize)} y: ${Math.round(this.playerFirst.y/sizes.tileSize)}`)
 
-    if (this.cursor.space.isDown && !this.bomb && this.isExplosionPlaying == false) {
+    if (this.cursor.space.isDown && !this.bomb && this.isExplosionPlaying == false && this.playerFirstBombs > 0) {
       if (!this.bomb) {
         this.bomb = this.physics.add.sprite(calculateCordinateXpx(calculateCordinateX(this.playerFirst.x)), calculateCordinateYpx(calculateCordinateY(this.playerFirst.y)), 'bomb', 0).setOrigin(0, 0)
         this.bomb.body.allowGravity = false
@@ -244,7 +273,8 @@ export function calculateCordinateYpx(y) {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyE) && this.bomb) {
-      
+      this.playerFirstBombs--
+      this.add.sprite(5 + this.playerFirstBombs * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 1).setOrigin(0, 0).setScale(0.75)
       this.explosion = this.physics.add.group()
       this.isExplosionPlaying = true
       this.physics.add.overlap(this.playerFirst, this.explosion, this.playerExplsoionHit, null, this)
@@ -375,7 +405,7 @@ export function calculateCordinateYpx(y) {
           explosion.destroy()
         })
         this.isExplosionPlaying = false
-        this.playerHit = false
+        this.playerFirstHit = false
       }, 800)
 
       this.bomb.destroy()
@@ -384,10 +414,10 @@ export function calculateCordinateYpx(y) {
 
     const {left, right, up, down, space} = this.cursor
 
-    if (this.cursor.left.isDown && !this.playerHit) {
+    if (this.cursor.left.isDown && !this.playerFirstHit) {
       this.playerFirst.anims.play("walkLeft", true);
       this.playerFirst.setVelocityX(-this.playerSpeed);  
-    } else if (this.cursor.right.isDown && !this.playerHit) {
+    } else if (this.cursor.right.isDown && !this.playerFirstHit) {
       this.playerFirst.anims.play("walkRight", true);
       this.playerFirst.setVelocityX(this.playerSpeed);
     } else {
@@ -395,10 +425,10 @@ export function calculateCordinateYpx(y) {
         this.playerFirst.anims.stop();
     }
 
-    if (this.cursor.up.isDown && !this.playerHit) {
+    if (this.cursor.up.isDown && !this.playerFirstHit) {
         this.playerFirst.setVelocityY(-this.playerSpeed);
         this.playerFirst.anims.play("walkUp", true);
-    } else if (this.cursor.down.isDown && !this.playerHit) {
+    } else if (this.cursor.down.isDown && !this.playerFirstHit) {
         this.playerFirst.setVelocityY(this.playerSpeed);
         this.playerFirst.anims.play("walkDown", true);
     } else {
@@ -414,10 +444,10 @@ export function calculateCordinateYpx(y) {
 
   playerExplsoionHit(player, explosion) {
     if (!explosion.hit && calculateCordinateX(explosion.x) == calculateCordinateX(player.x) &&calculateCordinateY(explosion.y) == calculateCordinateY(player.y)) {
-      this.playerHP -= 1
-      this.playerOrangeHPText.setText(`Player 1 HP: ${this.playerHP}`)
+      this.playerFirstHP -= 1
+      this.add.sprite(5 + this.playerFirstHP * (sizes.tileSize / 1.5 + 2), 5, 'hp', 1).setOrigin(0, 0).setScale(0.75)
       explosion.hit = true
-      this.playerHit = true
+      this.playerFirstHit = true
     }
   }
     
