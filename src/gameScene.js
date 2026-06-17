@@ -42,6 +42,12 @@ export function calculateCordinateYpx(y) {
     this.playerFirstBombs
     this.playerSecondHP
     this.playerSecondHit
+    this.powerUps
+    this.dropChance = 0.3
+    this.powerUpOne = 0.7
+    this.powerUpTwo = 0.25
+    this.powerUpThree = 0.05
+    this.maxBombNumber = 5
   }
 
   preload() {
@@ -76,6 +82,11 @@ export function calculateCordinateYpx(y) {
     })
     
     this.load.spritesheet('bomb_hp', 'assets/bomb_hp.png', {
+      frameWidth: sizes.tileSize,
+      frameHeight: sizes.tileSize
+    })
+
+    this.load.spritesheet('bomb_powerup', 'assets/bomb_powerup.png', {
       frameWidth: sizes.tileSize,
       frameHeight: sizes.tileSize
     })
@@ -222,6 +233,8 @@ export function calculateCordinateYpx(y) {
       this.add.sprite(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
     }
 
+    this.powerUps = this.physics.add.group()
+
     //player létrehozása
     this.playerFirstHit = undefined
     this.playerFirst = this.physics.add.sprite(calculateCordinateXpx(playerFirstStartX), calculateCordinateYpx(playerFirstStartY), 'player', 4).setOrigin(0, 0)
@@ -294,6 +307,13 @@ export function calculateCordinateYpx(y) {
           this.destroyedBlocks.getChildren().forEach(block => {
             if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x) + i) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
               block.destroy()
+              if (this.powerUpDrop() == true) {
+                this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
+                this.powerUps.getChildren().forEach(powerUp => {
+                  powerUp.body.setImmovable(true)
+                  powerUp.body.allowGravity = false
+                })
+              }
             }
           })
           this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x) + i), calculateCordinateYpx(calculateCordinateY(this.bomb.y)), 'explosion', 1).setOrigin(0, 0)
@@ -322,6 +342,13 @@ export function calculateCordinateYpx(y) {
           this.destroyedBlocks.getChildren().forEach(block => {
             if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x) - i) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
               block.destroy()
+              if (this.powerUpDrop() == true) {
+                this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
+                this.powerUps.getChildren().forEach(powerUp => {
+                  powerUp.body.setImmovable(true)
+                  powerUp.body.allowGravity = false
+                })
+              }
             }
           })
           this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x) - i), calculateCordinateYpx(calculateCordinateY(this.bomb.y)), 'explosion', 1).setOrigin(0, 0)
@@ -350,6 +377,13 @@ export function calculateCordinateYpx(y) {
           this.destroyedBlocks.getChildren().forEach(block => {
             if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y) + i)) {
               block.destroy()
+              if (this.powerUpDrop() == true) {
+                this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
+                this.powerUps.getChildren().forEach(powerUp => {
+                  powerUp.body.setImmovable(true)
+                  powerUp.body.allowGravity = false
+                })
+              }
             }
           })
           this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x)), calculateCordinateYpx(calculateCordinateY(this.bomb.y) + i), 'explosion', 1).setOrigin(0, 0)
@@ -378,6 +412,13 @@ export function calculateCordinateYpx(y) {
           this.destroyedBlocks.getChildren().forEach(block => {
             if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y) - i)) {
               block.destroy()
+              if (this.powerUpDrop() == true) {
+                this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
+                this.powerUps.getChildren().forEach(powerUp => {
+                  powerUp.body.setImmovable(true)
+                  powerUp.body.allowGravity = false
+                })
+              }
             }
           })
           this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x)), calculateCordinateYpx(calculateCordinateY(this.bomb.y) - i), 'explosion', 1).setOrigin(0, 0)
@@ -400,6 +441,7 @@ export function calculateCordinateYpx(y) {
         else { break }
       }
     
+      // robbanás animáció lejátszása és törlése
       setTimeout(() => {
         this.explosion.getChildren().slice().forEach(explosion => {
           explosion.destroy()
@@ -411,6 +453,37 @@ export function calculateCordinateYpx(y) {
       this.bomb.destroy()
       this.bomb = null
     }
+
+    if (this.powerUps.getChildren().length > 0) {
+      this.physics.add.overlap(this.playerFirst, this.powerUps, (player, powerUp) => {
+        if (powerUp.frame.name === 0) {
+          if (this.playerFirstBombs < this.maxBombNumber) {
+            this.playerFirstBombs++
+            this.add.sprite(5 + (this.playerFirstBombs - 1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+          }
+        }
+        else if (powerUp.frame.name === 1) {
+          this.playerFirstBombs +=2
+          if (this.playerFirstBombs > this.maxBombNumber) {
+            this.playerFirstBombs = this.maxBombNumber
+          }
+          for (let i = this.playerFirstBombs - 2; i < this.playerFirstBombs; i++) {
+            this.add.sprite(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+          }
+        }
+        else if (powerUp.frame.name === 2) {
+          this.playerFirstBombs +=3
+          if (this.playerFirstBombs > this.maxBombNumber) {
+            this.playerFirstBombs = this.maxBombNumber
+          }
+          for (let i = this.playerFirstBombs - 3; i < this.playerFirstBombs; i++) {
+            this.add.sprite(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+          }
+        }
+        powerUp.destroy()
+      })
+    }
+          
 
     const {left, right, up, down, space} = this.cursor
 
@@ -453,6 +526,33 @@ export function calculateCordinateYpx(y) {
     
   gameOver(){
     console.log("Game Over")
+  }
+
+  powerUpDrop(bombNumber){
+    this.randomDropChance = Math.floor(Math.random() * 10)
+    if (bombNumber === 1) {
+      this.dropChance = 0.5
+    }
+    if(this.randomDropChance <= this.dropChance * 10) {
+      return true
+    }
+    else {
+      return false
+    }
+    this.dropChance = 0.3
+  }
+  
+  powerUpType() {
+    this.randomPowerUpChance = Math.floor(Math.random() * 100)
+    if(this.randomPowerUpChance <= this.powerUpOne * 100 && this.randomPowerUpChance > this.powerUpTwo * 100) {
+      return 0
+    }
+    else if(this.randomPowerUpChance <= this.powerUpTwo * 100 && this.randomPowerUpChance > this.powerUpThree * 100) {
+      return 1
+    }
+    else if(this.randomPowerUpChance <= this.powerUpThree * 100) {
+      return 2
+    }
   }
 
 }
