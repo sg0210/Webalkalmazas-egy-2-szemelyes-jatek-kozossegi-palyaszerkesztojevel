@@ -40,6 +40,8 @@ export function calculateCordinateYpx(y) {
     this.playerFirstHP
     this.playerFirstHit
     this.playerFirstBombs
+    this.playerFirstBombGroup
+    this.playerFirstEmptyBombs
     this.playerSecondHP
     this.playerSecondHit
     this.powerUps
@@ -47,7 +49,8 @@ export function calculateCordinateYpx(y) {
     this.powerUpOne = 0.7
     this.powerUpTwo = 0.25
     this.powerUpThree = 0.05
-    this.maxBombNumber = 5
+    this.maxBombNumber = 3
+    this.extraBombNumber = 2
   }
 
   preload() {
@@ -81,7 +84,7 @@ export function calculateCordinateYpx(y) {
       frameHeight: sizes.tileSize
     })
     
-    this.load.spritesheet('bomb_hp', 'assets/bomb_hp.png', {
+    this.load.spritesheet('bomb_hp', 'assets/bombs.png', {
       frameWidth: sizes.tileSize,
       frameHeight: sizes.tileSize
     })
@@ -229,9 +232,12 @@ export function calculateCordinateYpx(y) {
 
     //HUD Bomb
     this.playerFirstBombs = 3
+    this.playerFirstBombGroup = this.add.group()
+    this.playerFirstEmptyBombs = this.add.group()
     for (let i = 0; i < this.playerFirstBombs; i++) {
-      this.add.sprite(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+      this.playerFirstBombGroup.create(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
     }
+    console.log(this.playerFirstBombs)
 
     this.powerUps = this.physics.add.group()
 
@@ -282,12 +288,16 @@ export function calculateCordinateYpx(y) {
         this.bomb.body.setImmovable(true)
         this.bomb.setCollideWorldBounds(true)
         this.physics.add.collider(this.playerFirst, this.bomb)
+        this.playerFirstBombGroup.getChildren().slice(this.playerFirstBombs - 1)[0].destroy()
+        this.emptyBomb(this.playerFirstBombs)
+        this.playerFirstBombs--
+        console.log(this.playerFirstBombs)
+        console.log(this.playerFirstEmptyBombs.getChildren())
       }
     }
 
+    //Bomba robbantása
     if (Phaser.Input.Keyboard.JustDown(this.keyE) && this.bomb) {
-      this.playerFirstBombs--
-      this.add.sprite(5 + this.playerFirstBombs * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 1).setOrigin(0, 0).setScale(0.75)
       this.explosion = this.physics.add.group()
       this.isExplosionPlaying = true
       this.physics.add.overlap(this.playerFirst, this.explosion, this.playerExplsoionHit, null, this)
@@ -454,30 +464,57 @@ export function calculateCordinateYpx(y) {
       this.bomb = null
     }
 
+    //Pwerup felvétele, bomba hozzáadása a HUD-hoz, max bombaszám ellenőrzése
     if (this.powerUps.getChildren().length > 0) {
       this.physics.add.overlap(this.playerFirst, this.powerUps, (player, powerUp) => {
         if (powerUp.frame.name === 0) {
-          if (this.playerFirstBombs < this.maxBombNumber) {
+          if (this.playerFirstBombs < this.maxBombNumber + this.extraBombNumber) {
             this.playerFirstBombs++
-            this.add.sprite(5 + (this.playerFirstBombs - 1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+            console.log(this.playerFirstBombs)
+            if (this.playerFirstBombs <= this.maxBombNumber) {
+              this.emptyBombDestroy(this.playerFirstBombs)
+            }
+            this.playerFirstBombGroup.create(5 + (this.playerFirstBombs - 1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(this.playerFirstBombs)).setOrigin(0, 0).setScale(0.75)
           }
+          console.log(this.playerFirstEmptyBombs.getChildren())
+
         }
         else if (powerUp.frame.name === 1) {
           this.playerFirstBombs +=2
-          if (this.playerFirstBombs > this.maxBombNumber) {
-            this.playerFirstBombs = this.maxBombNumber
+          if (this.playerFirstBombs > this.maxBombNumber + this.extraBombNumber) {
+            this.playerFirstBombs = this.maxBombNumber + this.extraBombNumber
           }
-          for (let i = this.playerFirstBombs - 2; i < this.playerFirstBombs; i++) {
-            this.add.sprite(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+          console.log(this.playerFirstBombs)
+          for (let i = this.playerFirstBombs - 1; i <= this.playerFirstBombs; i++) {
+            if (i <= this.maxBombNumber && i > 0) {
+              this.emptyBombDestroy(i)
+            }
+            if (i > 0) {
+              this.playerFirstBombGroup.create(5 + (i-1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(i)).setOrigin(0, 0).setScale(0.75)
+            }
+            else {
+              this.playerFirstBombGroup.create(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(i)).setOrigin(0, 0).setScale(0.75)
+            }
+            console.log(this.playerFirstEmptyBombs.getChildren())
           }
         }
         else if (powerUp.frame.name === 2) {
           this.playerFirstBombs +=3
-          if (this.playerFirstBombs > this.maxBombNumber) {
-            this.playerFirstBombs = this.maxBombNumber
+          if (this.playerFirstBombs > this.maxBombNumber + this.extraBombNumber) {
+            this.playerFirstBombs = this.maxBombNumber + this.extraBombNumber
           }
-          for (let i = this.playerFirstBombs - 3; i < this.playerFirstBombs; i++) {
-            this.add.sprite(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+          console.log(this.playerFirstBombs)
+          for (let i = this.playerFirstBombs - 2; i <= this.playerFirstBombs; i++) {
+            if (i <= this.maxBombNumber) {
+              this.emptyBombDestroy(i)
+            }
+            if (i > 0) {
+              this.playerFirstBombGroup.create(5 + (i-1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(i)).setOrigin(0, 0).setScale(0.75)
+            }
+            else {
+              this.playerFirstBombGroup.create(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(i)).setOrigin(0, 0).setScale(0.75)
+            }
+            console.log(this.playerFirstEmptyBombs.getChildren())
           }
         }
         powerUp.destroy()
@@ -510,7 +547,8 @@ export function calculateCordinateYpx(y) {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
-            this.scene.start('MenuScene')
+          this.scene.pause('GameScene')  
+          this.scene.launch('MenuScene')
         }
   }
 
@@ -531,7 +569,7 @@ export function calculateCordinateYpx(y) {
   powerUpDrop(bombNumber){
     this.randomDropChance = Math.floor(Math.random() * 10)
     if (bombNumber === 1) {
-      this.dropChance = 0.5
+      this.dropChance = 0.9
     }
     if(this.randomDropChance <= this.dropChance * 10) {
       return true
@@ -552,6 +590,28 @@ export function calculateCordinateYpx(y) {
     }
     else if(this.randomPowerUpChance <= this.powerUpThree * 100) {
       return 2
+    }
+  }
+
+  BombType(bombNumber) {
+    if (bombNumber <= this.maxBombNumber) {
+      return 0
+    }
+      return 2
+  }
+
+  emptyBomb(bombNumber) {
+    if (bombNumber <= this.maxBombNumber && bombNumber > 0) {
+      return this.playerFirstEmptyBombs.create(5 + (bombNumber - 1)   * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 1).setOrigin(0, 0).setScale(0.75)
+    }
+  }
+
+  emptyBombDestroy(bombNumber) {
+    if (bombNumber <= this.maxBombNumber) {
+      this.playerFirstEmptyBombs.getChildren().slice(this.maxBombNumber - bombNumber)[0].destroy()
+    }
+    else if (bombNumber === 0) {
+      this.playerFirstEmptyBombs.getChildren().slice(-1)[0].destroy()
     }
   }
 

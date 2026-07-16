@@ -153,7 +153,7 @@ export class MapEditor extends Phaser.Scene {
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
-            this.scene.start('MenuScene')
+            this.scene.start('LandScene')
         }
     }
 

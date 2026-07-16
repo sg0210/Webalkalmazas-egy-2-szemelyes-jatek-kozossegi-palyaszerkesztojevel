@@ -4,14 +4,15 @@ import {GameScene} from "./gameScene"
 import {sizes} from "./gameScene"
 import {speedDown} from "./gameScene"
 import {MapEditor} from "./mapEditor"
+import { LandScene } from './landScene'
 import { MenuScene } from './menuScene'
 
 const config = {
   type:Phaser.WEBGL,
-  width: sizes.screenWidth,
   height: sizes.screenHeight,
+  width: sizes.screenWidth,
   canvas: gameCanvas,
-  scene: [MenuScene, MapEditor, GameScene],
+  scene: [LandScene, MapEditor, GameScene, MenuScene],
   physics: {
     default: 'arcade',
     arcade: {
@@ -19,7 +20,9 @@ const config = {
       debug: true
     }
   },
-  pixelArt:true
+  render: {
+    pixelArt: true
+  },
 }
 
 const game = new Phaser.Game(config)
