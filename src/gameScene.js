@@ -34,7 +34,8 @@ export function calculateCordinateYpx(y) {
     this.playerSecond
     this.cursor
     this.playerSpeed = speedDown + 50
-    this.bomb
+    this.bombFirstPlayer = undefined
+    this.bombSecondPlayer = undefined
     this.destroyedBlocks
     this.explosion
     this.playerFirstHP
@@ -44,6 +45,9 @@ export function calculateCordinateYpx(y) {
     this.playerFirstEmptyBombs
     this.playerSecondHP
     this.playerSecondHit
+    this.playerSecondBombs
+    this.playerSecondBombGroup
+    this.playerSecondEmptyBombs
     this.powerUps
     this.dropChance = 0.3
     this.powerUpOne = 0.7
@@ -156,26 +160,34 @@ export function calculateCordinateYpx(y) {
       case 0: // top-left
         playerFirstStartX = 1
         playerFirstStartY = 1
+        if (this.registry.get('numberOfPlayers') === 2) {
         playerSecondStartX = sizes.mapSize - 2
         playerSecondStartY = sizes.mapSize - 2
+        }
         break
       case 1: // top-right
         playerFirstStartX = sizes.mapSize-2
         playerFirstStartY = 1
+        if (this.registry.get('numberOfPlayers') === 2) {
         playerSecondStartX = 1
         playerSecondStartY = sizes.mapSize - 2
+        }
         break
       case 2: // bottom-left
         playerFirstStartX = 1
         playerFirstStartY = sizes.mapSize-2
+        if (this.registry.get('numberOfPlayers') === 2) {
         playerSecondStartX = sizes.mapSize - 2
         playerSecondStartY = 1
+        }
         break
       case 3: // bottom-right
         playerFirstStartX = sizes.mapSize-2
         playerFirstStartY = sizes.mapSize-2
+        if (this.registry.get('numberOfPlayers') === 2) { 
         playerSecondStartX = 1
         playerSecondStartY = 1
+        }
         break 
     }
 
@@ -224,11 +236,52 @@ export function calculateCordinateYpx(y) {
     //kordinátáék számolása
     //this.scoreText = this.add.text(10, sizes.hudHeight + 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
 
+    //Bomb group létrehozása
+    this.bombFirstPlayer = this.physics.add.group()
+
+    if (this.registry.get('numberOfPlayers') === 2) {
+      //Hud HP
+      this.playerSecondHP = 3
+      for (let i = 0; i < this.playerSecondHP; i++) {
+         this.add.sprite(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
+      }
+
+      //Hud Bomb
+      this.playerSecondBombs = 3
+      this.playerSecondBombGroup = this.add.group()
+      this.playerSecondEmptyBombs = this.add.group()
+      for (let i = 0; i < this.playerSecondBombs; i++) {
+        this.playerSecondBombGroup.create(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+      }
+
+      //player 2 létrehozása
+      this.playerSecondHit = undefined
+      this.playerSecond = this.physics.add.sprite(calculateCordinateXpx(playerSecondStartX), calculateCordinateYpx(playerSecondStartY), 'player', 4).setOrigin(0, 0)
+      this.playerSecond.body.allowGravity = false
+      this.playerSecond.setCollideWorldBounds(true)
+
+      //player 2 hitbox a tile-okhoz igazítása
+      this.playerSecond.body.setSize(24, 24)
+      this.playerSecond.body.setOffset(4, 4)
+    
+      //player 2 és tile-ek közötti ütközés
+      this.playerSecond.body.setCircle(13)
+      this.physics.add.collider(this.playerSecond, blocklayer)
+      this.physics.add.collider(this.playerSecond, this.destroyedBlocks)
+
+      //player 1 és player 2 közötti ütközés
+      //this.physics.add.collider(this.playerFirst, this.playerSecond)
+
+      //Player 2 bomba group létrehozása
+      
+    }
+
     //HUD HP
     this.playerFirstHP = 3
     for (let i = 0; i < this.playerFirstHP; i++) {
       this.add.sprite(5 + i * (sizes.tileSize / 1.5 + 2), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
     }
+
 
     //HUD Bomb
     this.playerFirstBombs = 3
@@ -237,9 +290,6 @@ export function calculateCordinateYpx(y) {
     for (let i = 0; i < this.playerFirstBombs; i++) {
       this.playerFirstBombGroup.create(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
     }
-    console.log(this.playerFirstBombs)
-
-    this.powerUps = this.physics.add.group()
 
     //player létrehozása
     this.playerFirstHit = undefined
@@ -257,23 +307,41 @@ export function calculateCordinateYpx(y) {
     this.physics.add.collider(this.playerFirst, this.destroyedBlocks)
 
     // player mozgatása billentyűkkel
-      //Első játkos
+    if (this.registry.get('numberOfPlayers') === 2) {
+      //Két játékos
+        //1. játékos
+        this.cursorPlayerFirst = this.input.keyboard.createCursorKeys()
+        this.keyFirstPlayerPlaceBomb = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K)
+        this.keyFirstPlayerExplodeBomb = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L)
+
+        //2. játékos
+        this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W)
+        this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A)
+        this.keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S)
+        this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
+        this.keySecondPlayerPlaceBomb = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F)
+        this.keySecondPlayerExplodeBomb = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.G)
+    }
+    else {
+      //Egy játkos
       this.cursor = this.input.keyboard.createCursorKeys()
       this.keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E)
-
+      this.bombFirstPlayer = undefined
+    }
       
-
     //explosion
-    this.isExplosionPlaying = false
+    this.isExplosionPlayingFirstPlayer = false
+    this.isExplosionPlayingSecondPlayer = false
 
     //Vissza lépni a menube
     this.keyEsc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
-
-
+    
+    this.powerUps = this.physics.add.group()
+    
   }
   update() {
 
-    if (this.playerFirstHP === 0)
+    if (this.playerFirstHP === 0 || this.playerSecondHP === 0)
     {
       this.gameOver()
       this.scene.restart(GameScene)
@@ -281,30 +349,74 @@ export function calculateCordinateYpx(y) {
 
     //this.scoreText.setText(`cordinate x: ${Math.round(this.playerFirst.x/sizes.tileSize)} y: ${Math.round(this.playerFirst.y/sizes.tileSize)}`)
 
-    if (this.cursor.space.isDown && !this.bomb && this.isExplosionPlaying == false && this.playerFirstBombs > 0) {
-      if (!this.bomb) {
-        this.bomb = this.physics.add.sprite(calculateCordinateXpx(calculateCordinateX(this.playerFirst.x)), calculateCordinateYpx(calculateCordinateY(this.playerFirst.y)), 'bomb', 0).setOrigin(0, 0)
-        this.bomb.body.allowGravity = false
-        this.bomb.body.setImmovable(true)
-        this.bomb.setCollideWorldBounds(true)
-        this.physics.add.collider(this.playerFirst, this.bomb)
-        this.playerFirstBombGroup.getChildren().slice(this.playerFirstBombs - 1)[0].destroy()
-        this.emptyBomb(this.playerFirstBombs)
-        this.playerFirstBombs--
-        console.log(this.playerFirstBombs)
-        console.log(this.playerFirstEmptyBombs.getChildren())
-      }
-    }
+    if (this.registry.get('numberOfPlayers') === 2) {
+      //Player 1 mozgása
+      /*const {left, right, up, down, space} = this.cursorPlayerFirst
 
-    //Bomba robbantása
-    if (Phaser.Input.Keyboard.JustDown(this.keyE) && this.bomb) {
-      this.explosion = this.physics.add.group()
-      this.isExplosionPlaying = true
-      this.physics.add.overlap(this.playerFirst, this.explosion, this.playerExplsoionHit, null, this)
+      if (this.cursorPlayerFirst.left.isDown && !this.playerFirstHit) {
+          this.playerFirst.anims.play("walkLeft", true);
+          this.playerFirst.setVelocityX(-this.playerSpeed);  
+      } else if (this.cursorPlayerFirst.right.isDown && !this.playerFirstHit) {
+          this.playerFirst.anims.play("walkRight", true);
+          this.playerFirst.setVelocityX(this.playerSpeed);
+      } else {
+          this.playerFirst.setVelocityX(0);
+          this.playerFirst.anims.stop();
+      }
+
+      if (this.cursorPlayerFirst.up.isDown && !this.playerFirstHit) {
+          this.playerFirst.setVelocityY(-this.playerSpeed);
+          this.playerFirst.anims.play("walkUp", true);
+      } else if (this.cursorPlayerFirst.down.isDown && !this.playerFirstHit) {
+          this.playerFirst.setVelocityY(this.playerSpeed);
+          this.playerFirst.anims.play("walkDown", true);
+      } else {
+          this.playerFirst.setVelocityY(0);
+          this.playerFirst.anims.stop();
+      }*/
+
+      //Player 2 mozgása
+      if (this.keyA.isDown && !this.playerSecondHit) {
+          this.playerSecond.anims.play("walkLeft", true);
+          this.playerSecond.setVelocityX(-this.playerSpeed);  
+      } else if (this.keyD.isDown && !this.playerSecondHit) {
+          this.playerSecond.anims.play("walkRight", true);
+          this.playerSecond.setVelocityX(this.playerSpeed);
+      } else {
+          this.playerSecond.setVelocityX(0);
+          this.playerSecond.anims.stop();
+      }
+
+      if (this.keyW.isDown && !this.playerSecondHit) {
+          this.playerSecond.setVelocityY(-this.playerSpeed);
+          this.playerSecond.anims.play("walkUp", true);
+      } else if (this.keyS.isDown && !this.playerSecondHit) {
+          this.playerSecond.setVelocityY(this.playerSpeed);
+          this.playerSecond.anims.play("walkDown", true);
+      } else {
+          this.playerSecond.setVelocityY(0);
+          this.playerSecond.anims.stop();
+      }
+
+      //Player 1 bomba lerakása
+      if (Phaser.Input.Keyboard.JustDown(this.keyFirstPlayerPlaceBomb) && !this.bombFirstPlayer && this.isExplosionPlayingFirstPlayer == false && this.playerFirstBombs > 0) {
+        this.bombPlace(this.playerFirst, this.bombFirstPlayer, this.playerFirstBombs, this.playerFirstBombGroup)
+      }
+
+      //Player 2 bomba lerakása
+      if (Phaser.Input.Keyboard.JustDown(this.keySecondPlayerPlaceBomb) && !this.bombFirstPlayer && this.isExplosionPlayingSecondPlayer == false && this.playerSecondBombs > 0) {
+        this.bombPlace(this.playerSecond, this.bombSecondPlayer, this.playerSecondBombs, this.playerSecondBombGroup)
+      }
+
+      //Player 1 bomba robbantása
+      if (Phaser.Input.Keyboard.JustDown(this.keyFirstPlayerExplodeBomb) && this.bombFirstPlayer) {
+        this.explosion = this.physics.add.group()
+        this.isExplosionPlayingFirstPlayer = true
+        this.physics.add.overlap(this.playerFirst, this.explosion, this.playerExplsoionHit, null, this)
        
-      this.explosion.create(this.bomb.x, this.bomb.y, 'explosion', 1).setOrigin(0, 0)
-      this.explosion.getChildren().forEach(explosion => {
-        if (explosion.x === this.bomb.x && explosion.y === this.bomb.y) {
+        this.explosion.create(this.bombFirstPlayer.x, this.bombFirstPlayer.y, 'explosion', 1).setOrigin(0, 0)
+        this.explosion.getChildren().forEach(explosion => {
+        if (explosion.x === this.bombFirstPlayer.x && explosion.y === this.bombFirstPlayer.y) {
           explosion.body.allowGravity = false
           explosion.anims.play("explosion", true)
         }
@@ -312,215 +424,117 @@ export function calculateCordinateYpx(y) {
 
       //robbanások létrehozása a bomba körül a megadott méretig, amíg nem ütköznek falba
       //x kordináta növelése
-      for (let i = 1; i < sizes.explosionSize; i++) {
-        if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) + i] === 2) {
-          this.destroyedBlocks.getChildren().forEach(block => {
-            if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x) + i) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
-              block.destroy()
-              if (this.powerUpDrop() == true) {
-                this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
-                this.powerUps.getChildren().forEach(powerUp => {
-                  powerUp.body.setImmovable(true)
-                  powerUp.body.allowGravity = false
-                })
-              }
-            }
-          })
-          this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x) + i), calculateCordinateYpx(calculateCordinateY(this.bomb.y)), 'explosion', 1).setOrigin(0, 0)
-          this.explosion.getChildren().forEach(explosion => {
-          if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x) + i)  && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
-              explosion.body.allowGravity = false
-              explosion.anims.play("explosion", true)
-            }
-          })
-        }
-        else if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) + i] === 0) {
-            this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x) + i), calculateCordinateYpx(calculateCordinateY(this.bomb.y)), 'explosion', 1).setOrigin(0, 0)
-            this.explosion.getChildren().forEach(explosion => {
-              if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x) + i) && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
-                explosion.body.allowGravity = false
-                explosion.anims.play("explosion", true)
-              }
-            })
-        }
-        else { break }   
-      }
+        this.explosionXRangeCalculator("right", sizes.explosionSize, this.bombFirstPlayer.y, this.bombFirstPlayer.x)
 
       //x kordináta csökkentése
-      for (let i = 1; i < sizes.explosionSize; i++) {
-        if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) - i] === 2) {
-          this.destroyedBlocks.getChildren().forEach(block => {
-            if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x) - i) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
-              block.destroy()
-              if (this.powerUpDrop() == true) {
-                this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
-                this.powerUps.getChildren().forEach(powerUp => {
-                  powerUp.body.setImmovable(true)
-                  powerUp.body.allowGravity = false
-                })
-              }
-            }
-          })
-          this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x) - i), calculateCordinateYpx(calculateCordinateY(this.bomb.y)), 'explosion', 1).setOrigin(0, 0)
-          this.explosion.getChildren().forEach(explosion => {
-          if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x) - i) && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
-              explosion.body.allowGravity = false
-              explosion.anims.play("explosion", true)
-            }
-          })
-        }
-        else if (this.mapData[calculateCordinateY(this.bomb.y)][calculateCordinateX(this.bomb.x) - i] === 0) {
-            this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x) - i), calculateCordinateYpx(calculateCordinateY(this.bomb.y)), 'explosion', 1).setOrigin(0, 0)
-            this.explosion.getChildren().forEach(explosion => {
-              if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x) - i) && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y))) {
-                explosion.body.allowGravity = false
-                explosion.anims.play("explosion", true)
-              }
-            })
-        }
-        else { break }
-      }
+        this.explosionXRangeCalculator("left", sizes.explosionSize, this.bombFirstPlayer.y, this.bombFirstPlayer.x)
 
       //y kordináta növelése
-      for (let i = 1; i < sizes.explosionSize; i++) {
-        if (this.mapData[calculateCordinateY(this.bomb.y) + i][calculateCordinateX(this.bomb.x)] === 2) {
-          this.destroyedBlocks.getChildren().forEach(block => {
-            if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y) + i)) {
-              block.destroy()
-              if (this.powerUpDrop() == true) {
-                this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
-                this.powerUps.getChildren().forEach(powerUp => {
-                  powerUp.body.setImmovable(true)
-                  powerUp.body.allowGravity = false
-                })
-              }
-            }
-          })
-          this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x)), calculateCordinateYpx(calculateCordinateY(this.bomb.y) + i), 'explosion', 1).setOrigin(0, 0)
-          this.explosion.getChildren().forEach(explosion => {
-          if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y) + i)) {
-              explosion.body.allowGravity = false
-              explosion.anims.play("explosion", true)
-            }
-          })
-        }
-        else if (this.mapData[calculateCordinateY(this.bomb.y) + i][calculateCordinateX(this.bomb.x)] === 0) {
-            this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x)), calculateCordinateYpx(calculateCordinateY(this.bomb.y) + i), 'explosion', 1).setOrigin(0, 0)
-            this.explosion.getChildren().forEach(explosion => {
-              if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y) + i)) {
-                explosion.body.allowGravity = false
-                explosion.anims.play("explosion", true)
-              }
-            })
-        }
-        else { break }
-      }
+        this.explosionYRangeCalculator("up", sizes.explosionSize, this.bombFirstPlayer.y, this.bombFirstPlayer.x)
 
       //y kordináta csökkentése
-      for (let i = 1; i < sizes.explosionSize; i++) {
-        if (this.mapData[calculateCordinateY(this.bomb.y) - i][calculateCordinateX(this.bomb.x)] === 2) {
-          this.destroyedBlocks.getChildren().forEach(block => {
-            if (block.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) && block.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y) - i)) {
-              block.destroy()
-              if (this.powerUpDrop() == true) {
-                this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
-                this.powerUps.getChildren().forEach(powerUp => {
-                  powerUp.body.setImmovable(true)
-                  powerUp.body.allowGravity = false
-                })
-              }
-            }
-          })
-          this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x)), calculateCordinateYpx(calculateCordinateY(this.bomb.y) - i), 'explosion', 1).setOrigin(0, 0)
-          this.explosion.getChildren().forEach(explosion => {
-          if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y) - i)) {
-              explosion.body.allowGravity = false
-              explosion.anims.play("explosion", true)
-            }
-          })
-        }
-        else if (this.mapData[calculateCordinateY(this.bomb.y) - i][calculateCordinateX(this.bomb.x)] === 0) {
-            this.explosion.create(calculateCordinateXpx(calculateCordinateX(this.bomb.x)), calculateCordinateYpx(calculateCordinateY(this.bomb.y) - i), 'explosion', 1).setOrigin(0, 0)
-            this.explosion.getChildren().forEach(explosion => {
-              if(explosion.x === calculateCordinateXpx(calculateCordinateX(this.bomb.x)) && explosion.y === calculateCordinateYpx(calculateCordinateY(this.bomb.y) - i)) {
-                explosion.body.allowGravity = false
-                explosion.anims.play("explosion", true)
-              }
-            })
-        }
-        else { break }
-      }
+        this.explosionYRangeCalculator("down", sizes.explosionSize, this.bombFirstPlayer.y, this.bombFirstPlayer.x)
+      
     
       // robbanás animáció lejátszása és törlése
       setTimeout(() => {
         this.explosion.getChildren().slice().forEach(explosion => {
           explosion.destroy()
         })
-        this.isExplosionPlaying = false
+        this.isExplosionPlayingFirstPlayer = false
         this.playerFirstHit = false
       }, 800)
 
-      this.bomb.destroy()
-      this.bomb = null
+      this.bombFirstPlayer.destroy()
+      this.bombFirstPlayer = null
     }
 
-    //Pwerup felvétele, bomba hozzáadása a HUD-hoz, max bombaszám ellenőrzése
-    if (this.powerUps.getChildren().length > 0) {
-      this.physics.add.overlap(this.playerFirst, this.powerUps, (player, powerUp) => {
-        if (powerUp.frame.name === 0) {
-          if (this.playerFirstBombs < this.maxBombNumber + this.extraBombNumber) {
-            this.playerFirstBombs++
-            console.log(this.playerFirstBombs)
-            if (this.playerFirstBombs <= this.maxBombNumber) {
-              this.emptyBombDestroy(this.playerFirstBombs)
-            }
-            this.playerFirstBombGroup.create(5 + (this.playerFirstBombs - 1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(this.playerFirstBombs)).setOrigin(0, 0).setScale(0.75)
-          }
-          console.log(this.playerFirstEmptyBombs.getChildren())
-
+    //Player 2 bomba robbantása
+      if (Phaser.Input.Keyboard.JustDown(this.keySecondPlayerExplodeBomb) && this.bombSecondPlayer) {
+        this.explosion = this.physics.add.group()
+        this.isExplosionPlayingSecondPlayer = true
+        this.physics.add.overlap(this.playerSecond, this.explosion, this.playerExplsoionHit, null, this)
+       
+        this.explosion.create(this.bombSecondPlayer.x, this.bombSecondPlayer.y, 'explosion', 1).setOrigin(0, 0)
+        this.explosion.getChildren().forEach(explosion => {
+        if (explosion.x === this.bombSecondPlayer.x && explosion.y === this.bombSecondPlayer.y) {
+          explosion.body.allowGravity = false
+          explosion.anims.play("explosion", true)
         }
-        else if (powerUp.frame.name === 1) {
-          this.playerFirstBombs +=2
-          if (this.playerFirstBombs > this.maxBombNumber + this.extraBombNumber) {
-            this.playerFirstBombs = this.maxBombNumber + this.extraBombNumber
-          }
-          console.log(this.playerFirstBombs)
-          for (let i = this.playerFirstBombs - 1; i <= this.playerFirstBombs; i++) {
-            if (i <= this.maxBombNumber && i > 0) {
-              this.emptyBombDestroy(i)
-            }
-            if (i > 0) {
-              this.playerFirstBombGroup.create(5 + (i-1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(i)).setOrigin(0, 0).setScale(0.75)
-            }
-            else {
-              this.playerFirstBombGroup.create(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(i)).setOrigin(0, 0).setScale(0.75)
-            }
-            console.log(this.playerFirstEmptyBombs.getChildren())
-          }
-        }
-        else if (powerUp.frame.name === 2) {
-          this.playerFirstBombs +=3
-          if (this.playerFirstBombs > this.maxBombNumber + this.extraBombNumber) {
-            this.playerFirstBombs = this.maxBombNumber + this.extraBombNumber
-          }
-          console.log(this.playerFirstBombs)
-          for (let i = this.playerFirstBombs - 2; i <= this.playerFirstBombs; i++) {
-            if (i <= this.maxBombNumber) {
-              this.emptyBombDestroy(i)
-            }
-            if (i > 0) {
-              this.playerFirstBombGroup.create(5 + (i-1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(i)).setOrigin(0, 0).setScale(0.75)
-            }
-            else {
-              this.playerFirstBombGroup.create(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(i)).setOrigin(0, 0).setScale(0.75)
-            }
-            console.log(this.playerFirstEmptyBombs.getChildren())
-          }
-        }
-        powerUp.destroy()
       })
+
+      //robbanások létrehozása a bomba körül a megadott méretig, amíg nem ütköznek falba
+      //x kordináta növelése
+        this.explosionXRangeCalculator("right", sizes.explosionSize, this.bombSecondPlayer.y, this.bombSecondPlayer.x)
+
+      //x kordináta csökkentése
+        this.explosionXRangeCalculator("left", sizes.explosionSize, this.bombSecondPlayer.y, this.bombSecondPlayer.x)
+
+      //y kordináta növelése
+        this.explosionYRangeCalculator("up", sizes.explosionSize, this.bombSecondPlayer.y, this.bombSecondPlayer.x)
+
+      //y kordináta csökkentése
+        this.explosionYRangeCalculator("down", sizes.explosionSize, this.bombSecondPlayer.y, this.bombSecondPlayer.x)
+      
+    
+      // robbanás animáció lejátszása és törlése
+      setTimeout(() => {
+        this.explosion.getChildren().slice().forEach(explosion => {
+          explosion.destroy()
+        })
+        this.isExplosionPlayingSecondPlayer = false
+        this.playerSecondHit = false
+      }, 800)
+
+      this.bombSecondPlayer.destroy()
+      this.bombSecondPlayer = null
+      }
     }
-          
+    else { 
+    if (this.cursor.space.isDown && !this.bombFirstPlayer && this.isExplosionPlayingFirstPlayer == false && this.playerFirstBombs > 0) {
+        this.bombPlace(this.playerFirst, this.bombFirstPlayer, this.playerFirstBombs, this.playerFirstBombGroup)
+    }
+
+    //Bomba robbantása
+    if (Phaser.Input.Keyboard.JustDown(this.keyE) && this.bombFirstPlayer) {
+      this.explosion = this.physics.add.group()
+      this.isExplosionPlayingFirstPlayer = true
+      this.physics.add.overlap(this.playerFirst, this.explosion, this.playerExplsoionHit, null, this)
+       
+      this.explosion.create(this.bombFirstPlayer.x, this.bombFirstPlayer.y, 'explosion', 1).setOrigin(0, 0)
+      this.explosion.getChildren().forEach(explosion => {
+        if (explosion.x === this.bombFirstPlayer.x && explosion.y === this.bombFirstPlayer.y) {
+          explosion.body.allowGravity = false
+          explosion.anims.play("explosion", true)
+        }
+      })
+
+      //robbanások létrehozása a bomba körül a megadott méretig, amíg nem ütköznek falba
+      //x kordináta növelése
+      this.explosionXRangeCalculator("right", sizes.explosionSize, this.bombFirstPlayer.y, this.bombFirstPlayer.x)
+
+      //x kordináta csökkentése
+      this.explosionXRangeCalculator("left", sizes.explosionSize, this.bombFirstPlayer.y, this.bombFirstPlayer.x)
+
+      //y kordináta növelése
+      this.explosionYRangeCalculator("up", sizes.explosionSize, this.bombFirstPlayer.y, this.bombFirstPlayer.x)
+
+      //y kordináta csökkentése
+      this.explosionYRangeCalculator("down", sizes.explosionSize, this.bombFirstPlayer.y, this.bombFirstPlayer.x)
+      
+    
+      // robbanás animáció lejátszása és törlése
+      setTimeout(() => {
+        this.explosion.getChildren().slice().forEach(explosion => {
+          explosion.destroy()
+        })
+        this.isExplosionPlayingFirstPlayer = false
+        this.playerFirstHit = false
+      }, 800)
+
+      this.bombFirstPlayer.destroy()
+      this.bombFirstPlayer = null
+    }
 
     const {left, right, up, down, space} = this.cursor
 
@@ -545,10 +559,66 @@ export function calculateCordinateYpx(y) {
         this.playerFirst.setVelocityY(0);
         this.playerFirst.anims.stop();
     }
+  }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
+    //Pwerup felvétele, bomba hozzáadása a HUD-hoz, max bombaszám ellenőrzése
+    if (this.powerUps.getChildren().length > 0) {
+      this.physics.add.overlap(this.playerFirst, this.powerUps, (player, powerUp) => {
+        if (powerUp.frame.name === 0) {
+          if (this.playerFirstBombs < this.maxBombNumber + this.extraBombNumber) {
+            this.playerFirstBombs++
+            if (this.playerFirstBombs <= this.maxBombNumber) {
+              this.emptyBombDestroy(this.playerFirstBombs)
+            }
+            this.playerFirstBombGroup.create(5 + (this.playerFirstBombs - 1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.bombFirstPlayerType(this.playerFirstBombs)).setOrigin(0, 0).setScale(0.75)
+          }
+        }
+        else if (powerUp.frame.name === 1) {
+          this.playerFirstBombs +=2
+          if (this.playerFirstBombs > this.maxBombNumber + this.extraBombNumber) {
+            this.playerFirstBombs = this.maxBombNumber + this.extraBombNumber
+          }
+          console.log(this.playerFirstBombs)
+          for (let i = this.playerFirstBombs - 1; i <= this.playerFirstBombs; i++) {
+            if (i <= this.maxBombNumber && i > 0) {
+              this.emptyBombDestroy(i)
+            }
+            if (i > 0) {
+              this.playerFirstBombGroup.create(5 + (i-1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.bombFirstPlayerType(i)).setOrigin(0, 0).setScale(0.75)
+            }
+            else {
+              this.playerFirstBombGroup.create(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.bombFirstPlayerType(i)).setOrigin(0, 0).setScale(0.75)
+            }
+            console.log(this.playerFirstEmptyBombs.getChildren())
+          }
+        }
+        else if (powerUp.frame.name === 2) {
+          this.playerFirstBombs +=3
+          if (this.playerFirstBombs > this.maxBombNumber + this.extraBombNumber) {
+            this.playerFirstBombs = this.maxBombNumber + this.extraBombNumber
+          }
+          console.log(this.playerFirstBombs)
+          for (let i = this.playerFirstBombs - 2; i <= this.playerFirstBombs; i++) {
+            if (i <= this.maxBombNumber) {
+              this.emptyBombDestroy(i)
+            }
+            if (i > 0) {
+              this.playerFirstBombGroup.create(5 + (i-1) * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.bombFirstPlayerType(i)).setOrigin(0, 0).setScale(0.75)
+            }
+            else {
+              this.playerFirstBombGroup.create(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.bombFirstPlayerType(i)).setOrigin(0, 0).setScale(0.75)
+            }
+            console.log(this.playerFirstEmptyBombs.getChildren())
+          }
+        }
+        powerUp.destroy()
+      })
+    }
+
+    if (this.keyEsc.isDown) {
           this.scene.pause('GameScene')  
           this.scene.launch('MenuScene')
+          this.registry.set('previousScene', 'GameScene')
         }
   }
 
@@ -593,6 +663,17 @@ export function calculateCordinateYpx(y) {
     }
   }
 
+  bombPlace(player, playerBomb, playerBombs,playerBombGroup){
+    playerBomb = this.physics.add.sprite(calculateCordinateXpx(calculateCordinateX(player.x)), calculateCordinateYpx(calculateCordinateY(player.y)), 'bomb', 0).setOrigin(0, 0)
+        playerBomb.body.allowGravity = false
+        playerBomb.body.setImmovable(true)
+        playerBomb.setCollideWorldBounds(true)
+        this.physics.add.collider(player, playerBomb)
+        playerBombGroup.getChildren().slice(playerBombs - 1)[0].destroy()
+        this.emptyBomb(playerBombs)
+        playerBombs--
+  }
+
   BombType(bombNumber) {
     if (bombNumber <= this.maxBombNumber) {
       return 0
@@ -613,6 +694,80 @@ export function calculateCordinateYpx(y) {
     else if (bombNumber === 0) {
       this.playerFirstEmptyBombs.getChildren().slice(-1)[0].destroy()
     }
+  }
+
+  explosionXRangeCalculator(direction, explosionSize, y, x) {
+
+    for (let i = 1; i < explosionSize; i++) {
+        if (this.mapData[calculateCordinateY(y)][calculateCordinateX(x) + (direction === "right" ? i : -i)] === 2) {
+          this.destroyedBlocks.getChildren().forEach(block => {
+            if (block.x === calculateCordinateXpx(calculateCordinateX(x) + (direction === "right" ? i : -i)) && block.y === calculateCordinateYpx(calculateCordinateY(y))) {
+              block.destroy()
+              if (this.powerUpDrop() == true) {
+                this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
+                this.powerUps.getChildren().forEach(powerUp => {
+                  powerUp.body.setImmovable(true)
+                  powerUp.body.allowGravity = false
+                })
+              }
+            }
+          })
+          this.explosion.create(calculateCordinateXpx(calculateCordinateX(x) + (direction === "right" ? i : -i)), calculateCordinateYpx(calculateCordinateY(y)), 'explosion', 1).setOrigin(0, 0)
+          this.explosion.getChildren().forEach(explosion => {
+          if(explosion.x === calculateCordinateXpx(calculateCordinateX(x) + (direction === "right" ? i : -i))  && explosion.y === calculateCordinateYpx(calculateCordinateY(y))) {
+              explosion.body.allowGravity = false
+              explosion.anims.play("explosion", true)
+            }
+          })
+        }
+        else if (this.mapData[calculateCordinateY(y)][calculateCordinateX(x) + (direction === "right" ? i : -i)] === 0) {
+            this.explosion.create(calculateCordinateXpx(calculateCordinateX(x) + (direction === "right" ? i : -i)), calculateCordinateYpx(calculateCordinateY(y)), 'explosion', 1).setOrigin(0, 0)
+            this.explosion.getChildren().forEach(explosion => {
+              if(explosion.x === calculateCordinateXpx(calculateCordinateX(x) + (direction === "right" ? i : -i)) && explosion.y === calculateCordinateYpx(calculateCordinateY(y))) {
+                explosion.body.allowGravity = false
+                explosion.anims.play("explosion", true)
+              }
+            })
+        }
+        else { break }   
+      }
+  }
+
+  explosionYRangeCalculator(direction, explosionSize, y, x) {
+    
+   for (let i = 1; i < explosionSize; i++) {
+        if (this.mapData[calculateCordinateY(y) + (direction === "up" ? i : -i)][calculateCordinateX(x)] === 2) {
+          this.destroyedBlocks.getChildren().forEach(block => {
+            if (block.x === calculateCordinateXpx(calculateCordinateX(x)) && block.y === calculateCordinateYpx(calculateCordinateY(y) + (direction === "up" ? i : -i))) {
+              block.destroy()
+              if (this.powerUpDrop() == true) {
+                this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
+                this.powerUps.getChildren().forEach(powerUp => {
+                  powerUp.body.setImmovable(true)
+                  powerUp.body.allowGravity = false
+                })
+              }
+            }
+          })
+          this.explosion.create(calculateCordinateXpx(calculateCordinateX(x)), calculateCordinateYpx(calculateCordinateY(y) + (direction === "up" ? i : -i)), 'explosion', 1).setOrigin(0, 0)
+          this.explosion.getChildren().forEach(explosion => {
+          if(explosion.x === calculateCordinateXpx(calculateCordinateX(x)) && explosion.y === calculateCordinateYpx(calculateCordinateY(y) + (direction === "up" ? i : -i))) {
+              explosion.body.allowGravity = false
+              explosion.anims.play("explosion", true)
+            }
+          })
+        }
+        else if (this.mapData[calculateCordinateY(y) + (direction === "up" ? i : -i)][calculateCordinateX(x)] === 0) {
+            this.explosion.create(calculateCordinateXpx(calculateCordinateX(x)), calculateCordinateYpx(calculateCordinateY(y) + (direction === "up" ? i : -i)), 'explosion', 1).setOrigin(0, 0)
+            this.explosion.getChildren().forEach(explosion => {
+              if(explosion.x === calculateCordinateXpx(calculateCordinateX(x)) && explosion.y === calculateCordinateYpx(calculateCordinateY(y) + (direction === "up" ? i : -i))) {
+                explosion.body.allowGravity = false
+                explosion.anims.play("explosion", true)
+              }
+            })
+        }
+        else { break }
+      }
   }
 
 }

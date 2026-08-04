@@ -153,16 +153,19 @@ export class MapEditor extends Phaser.Scene {
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
-            this.scene.start('LandScene')
+            this.scene.pause('MapEditor')
+            this.scene.launch('MenuScene')
+            this.registry.set('previousScene', 'MapEditor')
         }
     }
 
     exportMap() {
         const mapString = JSON.stringify(this.mapData)
+        
         const blob = new Blob([mapString], {type: "text/plain"})
         const url = URL.createObjectURL(blob)
 
-        const a = document.createElement(a)
+        const a = document.createElement("a")
         a.href = url
         a.download = "custom_map.txt"
 

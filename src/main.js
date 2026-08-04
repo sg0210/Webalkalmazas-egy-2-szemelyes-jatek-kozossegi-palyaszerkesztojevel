@@ -6,13 +6,14 @@ import {speedDown} from "./gameScene"
 import {MapEditor} from "./mapEditor"
 import { LandScene } from './landScene'
 import { MenuScene } from './menuScene'
+import { PlayerSelectScene } from './playerSelectScene'
 
 const config = {
   type:Phaser.WEBGL,
   height: sizes.screenHeight,
   width: sizes.screenWidth,
   canvas: gameCanvas,
-  scene: [LandScene, MapEditor, GameScene, MenuScene],
+  scene: [LandScene, MapEditor, GameScene, MenuScene, PlayerSelectScene],
   physics: {
     default: 'arcade',
     arcade: {

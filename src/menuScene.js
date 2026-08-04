@@ -12,13 +12,13 @@ export class MenuScene extends Phaser.Scene {
     }
 
     create() {
+        const previousScene = this.registry.get('previousScene')
         this.menuBG = this.add.rectangle(sizes.screenWidth/2, sizes.screenHeight/2, 250, 200, 0x30303b, 1)
-        this.buttonExit = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 + 15 , 'Exit','GameScene', false, false, 'LandScene')
-        this.buttonResume = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 - 55, 'Resume', 'MenuScene', false, 'GameScene', false)
+        this.buttonExit = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 + 15 , 'Exit',previousScene, false, false, 'LandScene')
+        this.buttonResume = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 - 55, 'Resume', 'MenuScene', false, previousScene, false)
     }
 
     update() {
-        console.log(this.scene.key())
     }
 
     navigateButton(x, y, text, stopScene, startScene, resumeScene, switchScene) {
