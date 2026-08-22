@@ -7,13 +7,14 @@ import {MapEditor} from "./mapEditor"
 import { LandScene } from './landScene'
 import { MenuScene } from './menuScene'
 import { PlayerSelectScene } from './playerSelectScene'
+import { GameOverScene } from './gameOverScene'
 
 const config = {
   type:Phaser.WEBGL,
   height: sizes.screenHeight,
   width: sizes.screenWidth,
   canvas: gameCanvas,
-  scene: [LandScene, MapEditor, GameScene, MenuScene, PlayerSelectScene],
+  scene: [LandScene, MapEditor, GameScene, MenuScene, PlayerSelectScene, GameOverScene],
   physics: {
     default: 'arcade',
     arcade: {
