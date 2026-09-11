@@ -10,6 +10,7 @@ export class GameOverScene extends Phaser.Scene {
 
     create() {
         this.add.rectangle(0, 0, sizes.screenWidth, sizes.screenHeight, 0x160d08, 1).setOrigin(0)
+        this.add.text(sizes.screenWidth/2, sizes.screenHeight/2 - 100, 'Game Over', {fill: '#0f0', fontSize: '48px'}).setOrigin(0.5)
         this.navigateButton(sizes.screenWidth/2 - 75, sizes.screenHeight/2, 'Exit', 'LandScene')
         this.navigateButton(sizes.screenWidth/2 + 75, sizes.screenHeight/2, 'Restart', 'GameScene')
     }

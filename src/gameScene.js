@@ -389,6 +389,7 @@ export function calculateCordinateYpx(y) {
 
     if (Phaser.Input.Keyboard.JustDown(this.keyV)) {
       this.powerUpPutRandomly(this.players.first)
+      
     }
 
     if (this.registry.get('numberOfPlayers') === 2) {
@@ -720,32 +721,52 @@ export function calculateCordinateYpx(y) {
   }
 
   powerUpPutRandomly(player){
-    this.time.delayedCall(5000, () => {
+    this.time.delayedCall(0, () => {
       let possibleTile = []
       for (let i = 1; i <= 2; i++){
         if (calculateCordinateX(Math.floor(player.skin.x)) + i <= sizes.mapSize - 2 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) + i][calculateCordinateY(Math.floor(player.skin.y))] == 0){
-          console.log("Possible tile x+: " + calculateCordinateX(Math.floor(player.skin.x)) + i + " " + calculateCordinateY(Math.floor(player.skin.y)))
           possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) + i, y: calculateCordinateY(Math.floor(player.skin.y))})
         }
 
         if (calculateCordinateX(Math.floor(player.skin.x)) - i >= 0 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) - i][calculateCordinateY(Math.floor(player.skin.y))] == 0){
-          console.log("Possible tile x-: " + calculateCordinateX(Math.floor(player.skin.x)) - i + " " + calculateCordinateY(Math.floor(player.skin.y)))
           possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) - i, y: calculateCordinateY(Math.floor(player.skin.y))})
         }
 
         if (calculateCordinateY(Math.floor(player.skin.y)) + i <= sizes.mapSize - 2 && this.mapData[calculateCordinateX(Math.floor(player.skin.x))][calculateCordinateY(Math.floor(player.skin.y)) + i] == 0){
-          console.log("Possible tile y+: " + calculateCordinateX(Math.floor(player.skin.x)) + " " + calculateCordinateY(Math.floor(player.skin.y)) + i)
           possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)), y: calculateCordinateY(Math.floor(player.skin.y)) + i})
         }
 
         if (calculateCordinateY(Math.floor(player.skin.y)) - i >= 0 && this.mapData[calculateCordinateX(Math.floor(player.skin.x))][calculateCordinateY(Math.floor(player.skin.y)) - i] == 0){
-          console.log("Possible tile y-: " + calculateCordinateX(Math.floor(player.skin.x)) + " " + calculateCordinateY(Math.floor(player.skin.y)) - i)
           possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)), y: calculateCordinateY(Math.floor(player.skin.y)) - i})
         }
         
       }
 
-      this.powerUps.getChildren().forEach(powerUp => {
+      for (let i = 1; i <= 2; i++){
+        for (let j = 1; j <= i; j++){
+          if (calculateCordinateX(Math.floor(player.skin.x)) + i <= sizes.mapSize - 2 && calculateCordinateY(Math.floor(player.skin.y)) + j <= sizes.mapSize - 2 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) + i][calculateCordinateY(Math.floor(player.skin.y)) + j] == 0){
+            possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) + i, y: calculateCordinateY(Math.floor(player.skin.y)) + j})
+          }
+
+          if (calculateCordinateX(Math.floor(player.skin.x)) + i <= sizes.mapSize - 2 && calculateCordinateY(Math.floor(player.skin.y)) - j >= 0 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) + i][calculateCordinateY(Math.floor(player.skin.y)) - j] == 0){
+            possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) + i, y: calculateCordinateY(Math.floor(player.skin.y)) - j})
+          }
+
+          if (calculateCordinateX(Math.floor(player.skin.x)) - i <= 0 && calculateCordinateY(Math.floor(player.skin.y)) + j <= sizes.mapSize - 2 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) - i][calculateCordinateY(Math.floor(player.skin.y)) + j] == 0){
+            possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) - i, y: calculateCordinateY(Math.floor(player.skin.y)) + j})
+          }
+
+          if (calculateCordinateX(Math.floor(player.skin.x)) - i <= 0 && calculateCordinateY(Math.floor(player.skin.y)) - j >= 0 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) - i][calculateCordinateY(Math.floor(player.skin.y)) - j] == 0){
+            possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) - i, y: calculateCordinateY(Math.floor(player.skin.y)) - j})
+          }
+        }
+      }
+
+      possibleTile.forEach((cordinate, rowIndex) =>{
+        console.log("ID: " + rowIndex + " X: " + cordinate.x + " Y: " + cordinate.y )
+      })
+
+      /*this.powerUps.getChildren().forEach(powerUp => {
         for (let i = 0; i < possibleTile.length; i++) {
           if (powerUp.x === calculateCordinateXpx(possibleTile[i].x) && powerUp.y === calculateCordinateYpx(possibleTile[i].y)) {
             possibleTile.splice(i, 1)
@@ -761,7 +782,7 @@ export function calculateCordinateYpx(y) {
                   powerUp.body.setImmovable(true)
                   powerUp.body.allowGravity = false
                 })
-      }
+      }*/
       console.log("Lefutott")
       player.bombEmpty = true
     })

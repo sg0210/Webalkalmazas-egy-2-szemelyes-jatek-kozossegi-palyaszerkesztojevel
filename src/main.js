@@ -14,6 +14,12 @@ const config = {
   height: sizes.screenHeight,
   width: sizes.screenWidth,
   canvas: gameCanvas,
+  scale:{
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    expandParent: true,
+    resizeInterval: 0
+  },
   scene: [LandScene, MapEditor, GameScene, MenuScene, PlayerSelectScene, GameOverScene],
   physics: {
     default: 'arcade',
