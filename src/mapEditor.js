@@ -222,8 +222,8 @@ export class MapEditor extends Phaser.Scene {
         }else {return true}
     }
 
-    isSameTileType(x,y) {
-        if (this.mapData[calculateCordinateSmallerY(y)][calculateCordinateSmallerX(x)] == this.follower) {
+    isSameTileType(x, y, type) {
+        if (this.mapData[calculateCordinateSmallerY(y)][calculateCordinateSmallerX(x)] == type) {
             return false
         }
         else {return true}
@@ -242,6 +242,7 @@ export class MapEditor extends Phaser.Scene {
 
         const reachable = this.floodFill(mapData)
 
+        console.log("Reachable: " + reachable.size + ", Walkable: " + walkableTiles.length)
         return reachable.size === walkableTiles.length
     }
 
@@ -251,7 +252,7 @@ export class MapEditor extends Phaser.Scene {
         mapData[calculateCordinateSmallerY(y)][calculateCordinateSmallerX(x)] = type
         mapData.forEach((row, y) => {
             row.forEach((tile, x) => {
-                if (tile === 0) {
+                if (tile !== 1) {
                     walkable.push({ x, y })
                 }
             })
@@ -288,7 +289,7 @@ export class MapEditor extends Phaser.Scene {
 
                 if (visited.has(newKey)) continue
                 if (newX < 0 || newX >= sizes.mapSize || newY < 0 || newY >= sizes.mapSize) continue
-                if (this.mapData[newY][newX] === 1) continue
+                if (mapData[newY][newX] === 1) continue
                 stack.push({ x: newX, y: newY })
             }
         }
@@ -297,9 +298,10 @@ export class MapEditor extends Phaser.Scene {
     }
 
     canPlaceTile(pointer, type) {
+        this.crusorDown = true
         if (this.cornerSpawn(pointer.x, pointer.y) === false) return false, this.showNotification("You can't place blocks in the corners!", 2000) 
         if (this.sideoftheMap(pointer.x, pointer.y) === false) return false, this.showNotification("You can't place blocks on the edges!", 2000)
-        if (this.isSameTileType(pointer.x, pointer.y) === false) return false, this.showNotification("You can't place blocks of the same type!", 2000)
+        if (this.isSameTileType(pointer.x, pointer.y, type) === false) return false, this.showNotification("You can't place blocks of the same type!", 2000)
         if (type === 1) {
             if (this.reachAllWalkableTiles(pointer, type) !== true) return false, this.showNotification("You can't place blocks that would close off the map!", 2000)
         }
