@@ -92,8 +92,9 @@ export class MapManagment extends Phaser.Scene {
         
         const data = await response.json()
 
-        const mapData = data.maps
+        console.log(JSON.parse(data.maps[0].map_json))
+        const mapData = JSON.parse(data.maps[0].map_json)
 
-        this.scene.start('MapEditor', {mapData})
+        this.scene.start('MapEditor', { mapData })
     }
 }
