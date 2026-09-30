@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { calculateCordinateX, calculateCordinateY, sizes } from "./gameScene";
+import { LandScene } from "./landScene";
 
 export function calculateCordinateSmallerX(x) {
     return Math.floor(x / sizes.tileSize)
@@ -46,24 +47,30 @@ export class MapEditor extends Phaser.Scene {
 
 
         //Alap pélya létrehozása
-        const mapData = [
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-        ]
+        let mapData = [] 
+
+        if (this.registry.get('EditType') === 0 ){
+            mapData = [
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            ]
+        }else{
+            mapData = JSON.parse(data.maps[0].map_json)
+        }
 
         this.mapData = mapData
 
@@ -91,7 +98,15 @@ export class MapEditor extends Phaser.Scene {
         this.selectedBlock = null
 
         //Pálya mentése
-        const saveButton = this.add.text(sizes.screenWidth - 150, 10, '💾 Save Map', {
+        const saveButton = this.add.text(sizes.screenWidth - 75, 10, 'Save', {
+            fontFamily: 'Arial',
+            fontSize: '20px',
+            color: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 10, y: 5 }
+        })
+
+        const publishButton = this.add.text(sizes.screenWidth - 175, 10, 'Publish', {
             fontFamily: 'Arial',
             fontSize: '20px',
             color: '#ffffff',
@@ -102,10 +117,50 @@ export class MapEditor extends Phaser.Scene {
         saveButton.setInteractive({useHandCursor: true})
         saveButton.on('pointerdown', () => {
             saveButton.setStyle({backgroundColor: "#555555"})
-            this.exportMap()
+
+            const mapString = JSON.stringify(this.mapData)
+            const browser_id = this.getORcreatedID()
+
+            this.game.renderer.snapshotArea(0, 50, 512, 512, (image) => {
+            fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ browser_id: browser_id, map_json: mapString, published: 1, modified_date: new Date(), title: "teszt", picture: image.src})
+            })
+            .then(res => res.json())
+            .then(data => console.log('Map Saved', data))
+            .catch(err => console.error('Error:', err))
+
             this.time.delayedCall(150, () => {
                 saveButton.setStyle({backgroundColor: "#333333"})
             })
+            })
+
+            this.scene.start('LandScene')
+        })
+
+        publishButton.setInteractive({useHandCursor: true})
+        publishButton.on('pointerdown', () => {
+            publishButton.setStyle({backgroundColor: "#555555"})
+
+            this.game.renderer.snapshotArea(0, 50, 512, 512, (image) => {
+            const mapString = JSON.stringify(this.mapData)
+            const browser_id = this.getORcreatedID()
+
+            fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ browser_id: browser_id, map_json: mapString, published: 1, modified_date: new Date(), title: "teszt", picture: image.src })
+            })
+            .then(res => res.json())
+            .then(data => console.log('Map Saved', data))
+            .catch(err => console.error('Error:', err))
+
+            this.time.delayedCall(150, () => {
+                publishButton.setStyle({backgroundColor: "#333333"})
+            })
+        })
+            this.scene.switch('LandScene')
         })
 
         this.keyEsc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
@@ -306,6 +361,17 @@ export class MapEditor extends Phaser.Scene {
             if (this.reachAllWalkableTiles(pointer, type) !== true) return false, this.showNotification("You can't place blocks that would close off the map!", 2000)
         }
             return true
-    } 
+    }
+
+    getORcreatedID() {
+            let id = localStorage.getItem('browser_id')
+    
+            if (!id) {
+                const fingerprint = navigator.userAgent + navigator.language + screen.width
+                id = btoa(fingerprint).slice(0, 24)
+                localStorage.setItem('browser_id', id) 
+            }
+            return id;
+        }
     
 }

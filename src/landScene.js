@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import { sizes } from "./gameScene";
 
+
+
 export class LandScene extends Phaser.Scene {
     constructor() {
         super({key: 'LandScene'})
@@ -13,7 +15,17 @@ export class LandScene extends Phaser.Scene {
     create() {
         this.add.image(0, 0, 'bg').setOrigin(0).setDisplaySize(sizes.screenWidth, sizes.screenHeight)
         this.playButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2, 'Start', 'PlayerSelectScene')
-        this.editorButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 + 75, 'Editor', 'MapEditor')
+        this.editorButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 + 75, 'Editor', 'MapManagment')
+
+        fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/users', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ browser_id: this.getORcreatedID() })
+        })
+        .then(res => res.json())
+        .then(data => console.log('Player Saved:', data))
+        .catch(err => console.error('Error:', err))
+
     }
 
     update() {
@@ -28,6 +40,18 @@ export class LandScene extends Phaser.Scene {
 
         button.on('pointerover', () => {button.setScale(0.95)})
         button.on('pointerout', () => {button.setScale(1)})
-        button.on('pointerdown', () => {this.scene.start(scene)})
+        button.on('pointerdown', () => {this.scene.switch(scene)})
     }
+
+    getORcreatedID() {
+        let id = localStorage.getItem('browser_id')
+
+        if (!id) {
+            const fingerprint = navigator.userAgent + navigator.language + screen.width
+            id = btoa(fingerprint).slice(0, 24)
+            localStorage.setItem('browser_id', id) 
+        }
+        return id;
+    }
+
 }

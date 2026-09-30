@@ -30,20 +30,6 @@ export function calculateCordinateYpx(y) {
  export class GameScene extends Phaser.Scene {
   constructor() {
     super({key: 'GameScene'})
-    /*this.players.first.skin
-    this.players.first.skin
-    this.players.first.bomb = undefined
-    this.bombSecondPlayer = undefined
-    this.players.first.hp
-    this.players.first.hit
-    this.players.first.bombs
-    this.players.first.HUD.bombHUD.fill
-    this.players.first.HUD.bombHUD.empty
-    this.players.first.hp
-    this.players.second.hit
-    this.playerSecondBombs
-    this.playerSecondBombGroup
-    this.playerSecondEmptyBombs*/
     this.players = {
       first: {
         number: 1,
