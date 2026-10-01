@@ -23,11 +23,12 @@ export class MapEditor extends Phaser.Scene {
         this.map
         this.crusorDown = false
         this.mapData
+        this.allData = undefined
     }
 
     init(data){
         //Alap pálya létrehozása vagy betöltése
-        if (this.registry.get('EditType') === 0 ){
+        if (data.mapData === undefined || data.mapData === null ){
             this.mapData = [
                 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -47,8 +48,10 @@ export class MapEditor extends Phaser.Scene {
                 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
             ]
         }else{
-            this.mapData = data.mapData
+            this.mapData = JSON.parse(data.mapData[0].map_json)
+            this.allData = data.mapData
         }
+
     }
 
     preload() {
@@ -112,55 +115,33 @@ export class MapEditor extends Phaser.Scene {
             padding: { x: 10, y: 5 }
         })
 
+        const deleteButton = this.add.text(15, 10, 'Delete', {
+            fontFamily: 'Arial',
+            fontSize: '20px',
+            color: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 10, y: 5 }
+        })
+
+        deleteButton.setInteractive({useHandCursor: true}).on('pointerdown', ()=> {
+            this.onDelete(this.allData[0].id)
+            this.scene.start('MapManagment')
+        })
+
         saveButton.setInteractive({useHandCursor: true})
         saveButton.on('pointerdown', () => {
             saveButton.setStyle({backgroundColor: "#555555"})
-
-            const mapString = JSON.stringify(this.mapData)
-            const browser_id = this.getORcreatedID()
-
-            this.game.renderer.snapshotArea(0, 50, 512, 512, (image) => {
-            fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/save', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ browser_id: browser_id, map_json: mapString, published: 1, modified_date: new Date(), title: "teszt", picture: image.src})
-            })
-            .then(res => res.json())
-            .then(data => console.log('Map Saved', data))
-            .catch(err => console.error('Error:', err))
-
-            this.time.delayedCall(150, () => {
-                saveButton.setStyle({backgroundColor: "#333333"})
-            })
-            })
-
-            this.scene.start('LandScene')
+            this.onSave(this.mapData, 0)
+            this.scene.start('MapManagment')
         })
 
         publishButton.setInteractive({useHandCursor: true})
         publishButton.on('pointerdown', () => {
             publishButton.setStyle({backgroundColor: "#555555"})
-
-            this.game.renderer.snapshotArea(0, 50, 512, 512, (image) => {
-            const mapString = JSON.stringify(this.mapData)
-            const browser_id = this.getORcreatedID()
-
-            fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/save', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ browser_id: browser_id, map_json: mapString, published: 1, modified_date: new Date(), title: "teszt", picture: image.src })
-            })
-            .then(res => res.json())
-            .then(data => console.log('Map Saved', data))
-            .catch(err => console.error('Error:', err))
-
-            this.time.delayedCall(150, () => {
-                publishButton.setStyle({backgroundColor: "#333333"})
-            })
+            this.onSave(this.mapData, 1)
+            this.scene.switch('MapManagment')
         })
-            this.scene.switch('LandScene')
-        })
-
+        
         this.keyEsc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
         this.keyV = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.V)
     }
@@ -372,4 +353,50 @@ export class MapEditor extends Phaser.Scene {
             return id;
         }
     
+    onSave(mapData, publish){
+        this.game.renderer.snapshotArea(0, 50, 512, 512, (image) => {
+            const mapString = JSON.stringify(mapData)
+            const browser_id = this.getORcreatedID()
+
+            if (this.allData[0] == undefined){
+                fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ browser_id: browser_id, map_json: mapString, published: publish, modified_date: new Date(), title: "teszt", picture: image.src })
+                })
+                .then(res => res.json())
+                .then(data => console.log('Map Saved', data))
+                .catch(err => console.error('Error:', err))
+            }else{
+                fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps', {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: this.allData[0].id, browser_id: browser_id, map_json: mapString, published: publish, modified_date: new Date(), title: "teszt", picture: image.src })
+                })
+                .then(res => res.json())
+                .then(data => console.log('Map Saved', data))
+                .catch(err => console.error('Error:', err))
+            }
+        })
+    }
+
+    async onDelete(id){
+        try{ 
+            const response = await fetch(`https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/${id}`, {
+                    method: 'DELETE',
+                    headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')},
+                    //body: JSON.stringify({ id: this.allData[0].id })
+                })
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`)
+                }
+
+                const data = response.status === 204 ? {success: true} : await response.json()
+                return data
+        } catch (err) {
+            console.error('Error:', err)
+        }
+    }
+
 }

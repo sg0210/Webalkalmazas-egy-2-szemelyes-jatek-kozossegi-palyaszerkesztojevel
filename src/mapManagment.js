@@ -62,28 +62,35 @@ export class MapManagment extends Phaser.Scene {
 
         const xseperator = (widht + gap) * column
         const yseperator = (height + gap) * row
-        const bg = this.add.rectangle(10 + xseperator, 50 + yseperator, widht, height, 0x2c3e50).setOrigin(0, 0)
-        const picture = this.add.image(15 + xseperator, 55 + yseperator, map.picture).setDisplaySize(90, 90).setOrigin(0, 0)
-        const title = this.add.text(15 + xseperator, 145 + yseperator, map.title).setOrigin(0, 0)
-        const editButton = this.buttonDesign(15 + xseperator, 155 + yseperator)
-        editButton.setInteractive({usehandCorsor: true})
+
+        const card = this.add.container(10 + xseperator, 50 + yseperator)
+        const bg = this.add.rectangle(10, 50 , widht, height, 0x2c3e50).setOrigin(0, 0)
+        const picture = this.add.image(15, 55 , map.picture).setDisplaySize(90, 90).setOrigin(0, 0)
+        const title = this.add.text(15, 145 , map.title).setOrigin(0, 0)
+        const editButton = this.buttonDesign(15, 155)
+        editButton.setInteractive(new Phaser.Geom.Rectangle(25, 10, 50, 20), Phaser.Geom.Rectangle.Contains)
         editButton.on('pointerdown', () => this.onEdit(map.id))
 
+        card.add([bg, picture, title, editButton])
+        card.setSize(widht, height)
     }
 
     buttonDesign(x, y){
-        const bg = this.add.rectangle(x, y + 5, 50, 20, 0x3498db).setOrigin(0, 0)
-        const buttonText = this.add.text(x + 5, y + 7.5, 'Edit', {
+        const buttonContainer = this.add.container(x, y + 5)
+        const bg = this.add.rectangle(0, 0, 50, 20, 0x3498db).setOrigin(0, 0)
+        const buttonText = this.add.text(0, 0, 'Edit', {
             fontSize: '16px',
             fill: '#fff',
             fontWeight: 'bold'
-        }).setOrigin(0, 0);
+        }).setOrigin(0, 0).setPadding(5, 2, 5, 2);
+        buttonContainer.setSize(50, 20)
 
-        return bg, buttonText
+        buttonContainer.add([bg, buttonText])
+        return buttonContainer
     }
 
     async onEdit(mapID){
-        this.registry.set('EditType', 1)
+
         const response = await fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/map/get', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -93,7 +100,7 @@ export class MapManagment extends Phaser.Scene {
         const data = await response.json()
 
         console.log(JSON.parse(data.maps[0].map_json))
-        const mapData = JSON.parse(data.maps[0].map_json)
+        const mapData = data.maps
 
         this.scene.start('MapEditor', { mapData })
     }

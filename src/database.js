@@ -74,13 +74,23 @@ app.post('/maps/save', (req, res) => {
 })
 
 app.put('/maps', (req, res) => {
-    const { browser_id, map_json, published, modified_date, title, picture, id } = req.body
+    const { id, browser_id, map_json, published, modified_date, title, picture } = req.body
 
     try {
         const user = db.prepare(`SELECT id FROM users WHERE browser_id = ?`).get(browser_id)
         if (!user) {
             return res.status(404).json({error: 'User not found'})
         }
+
+        const base64Data = req.body.picture.replace(/^data:image\/png;base64,/,'')
+
+        const filename =`${Date.now()+'_'+user.id}.png`
+
+        fs.writeFileSync(
+            `src/pictures/filename`,
+            base64Data,
+            'base64'
+        )
 
         db.prepare(`UPDATE maps SET map_json = ?, published = ?, modified_date = ?, title = ?, picture = ? WHERE id = ? AND user_id = ?`).run( map_json, published, modified_date, title, picture, id, user.id)
 
@@ -91,18 +101,21 @@ app.put('/maps', (req, res) => {
     
 })
 
-app.delete('/maps', (req, res) => {
-    const { id } = req.body
+app.delete("/maps/:id", async (req, res) => {
+    console.log('Delete request received for map ID:', req.params.id, req.url, req.method, req.body)
+    console.log('Request headers:', req.headers)
+    const id = req.params.id
 
     try {
-
-        db.prepare(`DELETE maps WHERE id = ?`).run(id)
-
-        res.json({success: true})
+        const result = db.prepare(`DELETE FROM maps WHERE id = ?`).run(id)
+        if (result.changes === 0) {
+            return res.status(404).json({error: 'Map not found'})
+        }
+        res.status(204).send()
     } catch (err) {
+        console.error('Error deleting map:', err)
         res.status(500).json({error: err.message})
     }
-    
 })
 
 app.post('/maps/get', (req, res) => {
