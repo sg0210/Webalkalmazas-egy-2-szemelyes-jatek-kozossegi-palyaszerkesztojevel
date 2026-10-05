@@ -132,7 +132,7 @@ export class MapEditor extends Phaser.Scene {
         saveButton.on('pointerdown', () => {
             saveButton.setStyle({backgroundColor: "#555555"})
             this.onSave(this.mapData, 0)
-            this.scene.start('MapManagment')
+            //this.scene.start('MapManagment')
         })
 
         publishButton.setInteractive({useHandCursor: true})
@@ -359,25 +359,26 @@ export class MapEditor extends Phaser.Scene {
             const browser_id = this.getORcreatedID()
 
             if (this.allData[0] == undefined){
-                fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/save', {
+                fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/insert', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ browser_id: browser_id, map_json: mapString, published: publish, modified_date: new Date(), title: "teszt", picture: image.src })
                 })
                 .then(res => res.json())
-                .then(data => console.log('Map Saved', data))
+                .then(data => console.log('Map Inserted', data), 
+                this.time.delayedCall(1000, () => this.scene.start('MapManagment')))
                 .catch(err => console.error('Error:', err))
             }else{
-                fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps', {
+                fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/update', {
                     method: 'PUT',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ id: this.allData[0].id, browser_id: browser_id, map_json: mapString, published: publish, modified_date: new Date(), title: "teszt", picture: image.src })
                 })
                 .then(res => res.json())
-                .then(data => console.log('Map Saved', data))
+                .then(data => console.log('Map Updated', data), this.scene.start('MapManagment'))
                 .catch(err => console.error('Error:', err))
-            }
-        })
+                }
+            })
     }
 
     async onDelete(id){

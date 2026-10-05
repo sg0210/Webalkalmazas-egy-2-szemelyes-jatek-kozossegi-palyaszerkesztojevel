@@ -40,7 +40,7 @@ export class LandScene extends Phaser.Scene {
 
         button.on('pointerover', () => {button.setScale(0.95)})
         button.on('pointerout', () => {button.setScale(1)})
-        button.on('pointerdown', () => {this.scene.switch(scene)})
+        button.on('pointerdown', () => {this.scene.start(scene)})
     }
 
     getORcreatedID() {

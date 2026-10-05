@@ -45,7 +45,7 @@ app.post('/users', (req, res) => {
     }
 })
 
-app.post('/maps/save', (req, res) => {
+app.post('/maps/insert', (req, res) => {
     const { browser_id, map_json, published, modified_date, title, picture } = req.body
 
     try {
@@ -56,10 +56,10 @@ app.post('/maps/save', (req, res) => {
 
         const base64Data = req.body.picture.replace(/^data:image\/png;base64,/,'')
 
-        const filename =`${Date.now()+'_'+user.id}.png`
+        const filename =`${Date.now()+'_'+user.id+'_'+req.body.id}.png`
 
         fs.writeFileSync(
-            `src/pictures/filename`,
+            `src/pictures/${filename}`,
             base64Data,
             'base64'
         )
@@ -73,7 +73,7 @@ app.post('/maps/save', (req, res) => {
     
 })
 
-app.put('/maps', (req, res) => {
+app.put('/maps/update', (req, res) => {
     const { id, browser_id, map_json, published, modified_date, title, picture } = req.body
 
     try {
@@ -82,18 +82,17 @@ app.put('/maps', (req, res) => {
             return res.status(404).json({error: 'User not found'})
         }
 
-        const base64Data = req.body.picture.replace(/^data:image\/png;base64,/,'')
+        const base64Data = picture.replace(/^data:image\/png;base64,/,'')
 
-        const filename =`${Date.now()+'_'+user.id}.png`
+        const filename =`${Date.now()+'_'+user.id+'_'+id}.png`
 
         fs.writeFileSync(
-            `src/pictures/filename`,
+            `src/pictures/${filename}`,
             base64Data,
             'base64'
         )
 
-        db.prepare(`UPDATE maps SET map_json = ?, published = ?, modified_date = ?, title = ?, picture = ? WHERE id = ? AND user_id = ?`).run( map_json, published, modified_date, title, picture, id, user.id)
-
+        db.prepare(`UPDATE maps SET map_json = ?, published = ?, modified_date = ?, title = ?, picture = ? WHERE id = ? AND user_id = ?`).run( map_json, published, modified_date, title, filename, id, user.id)
         res.json({success: true})
     } catch (err) {
         res.status(500).json({error: err.message})
@@ -102,8 +101,6 @@ app.put('/maps', (req, res) => {
 })
 
 app.delete("/maps/:id", async (req, res) => {
-    console.log('Delete request received for map ID:', req.params.id, req.url, req.method, req.body)
-    console.log('Request headers:', req.headers)
     const id = req.params.id
 
     try {
