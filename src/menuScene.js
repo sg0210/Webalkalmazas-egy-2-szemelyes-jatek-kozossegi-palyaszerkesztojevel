@@ -33,6 +33,6 @@ export class MenuScene extends Phaser.Scene {
         button.on('pointerdown', () => {if (stopScene != false){this.scene.stop(stopScene)}
                                         if (startScene != false){this.scene.start(startScene)}
                                         if (resumeScene != false){this.scene.run(resumeScene)}
-                                        if (switchScene != false) {this.scene.switch(switchScene)}})
+                                        if (switchScene != false) {this.scene.start(switchScene)}})
     }
 }

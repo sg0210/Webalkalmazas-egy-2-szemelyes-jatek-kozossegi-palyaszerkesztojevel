@@ -27,9 +27,9 @@ export class GameOverScene extends Phaser.Scene {
             button.on('pointerover', () => {button.setScale(0.95)})
             button.on('pointerout', () => {button.setScale(1)})
             button.on('pointerdown', () => {if (scene === 'GameScene') {
-                this.scene.switch(scene)
+                this.scene.start(scene)
             } else {
-                this.scene.switch(scene)
+                this.scene.start(scene)
                 this.scene.stop('GameScene')
             }})
         }

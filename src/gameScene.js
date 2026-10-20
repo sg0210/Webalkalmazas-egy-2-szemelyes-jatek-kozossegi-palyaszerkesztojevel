@@ -30,37 +30,8 @@ export function calculateCordinateYpx(y) {
  export class GameScene extends Phaser.Scene {
   constructor() {
     super({key: 'GameScene'})
-    this.players = {
-      first: {
-        number: 1,
-        skin: undefined,
-        hp: 3,
-        hit: false,
-        bombs: 3,
-        bomb: undefined,
-        bombEmpty: false,
-        HUD: {
-          bombHUD: {},
-          hpHUD: {}
-        },
-        isExplosionPlaying: false
-      },
-      second: {
-        number: 2,
-        skin: undefined,
-        hp: 3,
-        hit: false,
-        bombs: 3,
-        bomb: undefined,
-        bombEmpty: false,
-        HUD: {
-          bombHUD: {},
-          hpHUD: {}
-        },
-        isExplosionPlaying: false
-      }
-    }
-    this.playerSpeed = speedDown + 50
+    this.players = {}
+    this.playerSpeed = speedDown
     this.destroyableBlocks
     this.explosion
     this.cursor
@@ -71,6 +42,22 @@ export function calculateCordinateYpx(y) {
     this.powerUpThree = 0.05
     this.maxBombNumber = 3
     this.extraBombNumber = 2
+    this.explosionSize = 4
+  }
+  
+  init (data) {
+    this.numberOfPlayers = data.numberOfPlayers
+    if (this.numberOfPlayers === 2) {
+      this.players = {
+        first: this.createPlayer(1),
+        second: this.createPlayer(2)
+      }
+    } else {
+      this.players = {
+        first: this.createPlayer(1),
+        ai: this.createPlayer(2)
+      }
+    }
   }
 
   preload() {
@@ -176,34 +163,26 @@ export function calculateCordinateYpx(y) {
       case 0: // top-left
         playerFirstStartX = 1
         playerFirstStartY = 1
-        if (this.registry.get('numberOfPlayers') === 2) {
         playerSecondStartX = sizes.mapSize - 2
         playerSecondStartY = sizes.mapSize - 2
-        }
         break
       case 1: // top-right
         playerFirstStartX = sizes.mapSize-2
         playerFirstStartY = 1
-        if (this.registry.get('numberOfPlayers') === 2) {
         playerSecondStartX = 1
         playerSecondStartY = sizes.mapSize - 2
-        }
         break
       case 2: // bottom-left
         playerFirstStartX = 1
         playerFirstStartY = sizes.mapSize-2
-        if (this.registry.get('numberOfPlayers') === 2) {
         playerSecondStartX = sizes.mapSize - 2
         playerSecondStartY = 1
-        }
         break
       case 3: // bottom-right
         playerFirstStartX = sizes.mapSize-2
         playerFirstStartY = sizes.mapSize-2
-        if (this.registry.get('numberOfPlayers') === 2) { 
         playerSecondStartX = 1
         playerSecondStartY = 1
-        }
         break 
     }
 
@@ -252,111 +231,54 @@ export function calculateCordinateYpx(y) {
     //kordinátáék számolása
     //this.scoreText = this.add.text(10, sizes.hudHeight + 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
 
-    //Bomb group létrehozása
-    this.players.first.HUD.bombHUD.fill = this.add.group()
-    this.players.first.HUD.bombHUD.empty = this.add.group()
-    this.players.first.HUD.hpHUD.fill = this.add.group()
-    this.players.first.HUD.hpHUD.empty = this.add.group()
-
-    if (this.registry.get('numberOfPlayers') === 2) {
-      //Hud HP
-      this.players.second.hp = 3
-      this.players.second.HUD.hpHUD.fill = this.add.group()
-      this.players.second.HUD.hpHUD.empty = this.add.group()
+    //HUD group létrehozása
+    
+    this.players.first.HUD = {hpHUD: this.createPlayerHUD(), bombHUD: this.createPlayerHUD()}
+    for (let i = 0; i < this.players.first.hp; i++) {
+         this.players.first.HUD.hpHUD.fill.create(0 + (5 + i * (sizes.tileSize / 1.5 + 2)), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
+    }
+    for (let i = 0; i < this.players.first.bombs; i++) {
+        this.players.first.HUD.bombHUD.fill.create(0 + (5 + i * (sizes.tileSize / 1.5 + 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+    }
+    if (this.numberOfPlayers === 2) {
+      this.players.second.HUD = {hpHUD: this.createPlayerHUD(),
+                                 bombHUD: this.createPlayerHUD()}
       for (let i = 0; i < this.players.second.hp; i++) {
          this.players.second.HUD.hpHUD.fill.create(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
       }
-
-      //Hud Bomb
-      this.players.second.bombs = 3
-      this.players.second.HUD.bombHUD.fill = this.add.group()
-      this.players.second.HUD.bombHUD.empty = this.add.group()
       for (let i = 0; i < this.players.second.bombs; i++) {
         this.players.second.HUD.bombHUD.fill.create(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
       }
-
-      //player 2 létrehozása
-      this.players.second.hit = false
-      this.players.second.skin = this.physics.add.sprite(calculateCordinateXpx(playerSecondStartX), calculateCordinateYpx(playerSecondStartY), 'player', 4).setOrigin(0, 0)
-      this.players.second.skin.body.allowGravity = false
-      this.players.second.skin.setCollideWorldBounds(true)
-
-      //player 2 hitbox a tile-okhoz igazítása
-      this.players.second.skin.body.setSize(24, 24)
-      this.players.second.skin.body.setOffset(4, 4)
-    
-      //player 2 és tile-ek közötti ütközés
-      this.players.second.skin.body.setCircle(13)
-      this.physics.add.collider(this.players.second.skin, blocklayer)
-      this.physics.add.collider(this.players.second.skin, this.destroyableBlocks)
-
-      //player 1 és player 2 közötti ütközés
-      //this.physics.add.collider(this.players.first.skin, this.players.first.skin)
-      
-    }
-
-    //HUD HP
-    this.players.first.hp = 3
-    for (let i = 0; i < this.players.first.hp; i++) {
-      this.players.first.HUD.hpHUD.fill.create(5 + i * (sizes.tileSize / 1.5 + 2), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
-    }
-
-
-    //HUD Bomb
-    this.players.first.bombs = 3
-    this.players.first.HUD.bombHUD.fill = this.add.group()
-    this.players.first.HUD.bombHUD.empty = this.add.group()
-    for (let i = 0; i < this.players.first.bombs; i++) {
-      this.players.first.HUD.bombHUD.fill.create(5 + i * (sizes.tileSize / 1.5 + 2), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
-    }
-
-    //player létrehozása
-    this.players.first.hit = false
-    this.players.first.skin = this.physics.add.sprite(calculateCordinateXpx(playerFirstStartX), calculateCordinateYpx(playerFirstStartY), 'player', 4).setOrigin(0, 0)
-    this.players.first.skin.body.allowGravity = false
-    this.players.first.skin.setCollideWorldBounds(true)
-
-    //player hitbox a tile-okhoz igazítása
-    this.players.first.skin.body.setSize(24, 24)
-    this.players.first.skin.body.setOffset(4, 4)
-    
-    // player és tile-ek közötti ütközés
-    this.players.first.skin.body.setCircle(13)
-    this.physics.add.collider(this.players.first.skin, blocklayer)
-    this.physics.add.collider(this.players.first.skin, this.destroyableBlocks)
-
-    // player mozgatása billentyűkkel
-    if (this.registry.get('numberOfPlayers') === 2) {
-      //Két játékos
-        //1. játékos
-        this.keyFirstPlayerPlaceBomb = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K)
-        this.keyFirstPlayerExplodeBomb = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L)
-
-        //2. játékos
-        this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W)
-        this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A)
-        this.keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S)
-        this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
-        this.keySecondPlayerPlaceBomb = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F)
-        this.keySecondPlayerExplodeBomb = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.G)
-        this.players.first.bomb = undefined
-        this.players.second.bomb = undefined
-        this.players.first.bombEmpty = false
     }
     else {
-      //Egy játkos
-      this.keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E)
-      this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
-      this.players.first.bomb = undefined
-      this.players.first.bombEmpty = false
+      this.players.ai.HUD = {hpHUD: this.createPlayerHUD(),
+                                 bombHUD: this.createPlayerHUD()}
+      for (let i = 0; i < this.players.ai.hp; i++) {
+         this.players.ai.HUD.hpHUD.fill.create(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
+      }
+      for (let i = 0; i < this.players.ai.bombs; i++) {
+        this.players.ai.HUD.bombHUD.fill.create(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+      }
     }
-    
-    this.cursor = this.input.keyboard.createCursorKeys()
 
+    //Players karakter létrehozása
+    this.createCharacter(this.players.first, playerFirstStartX, playerFirstStartY, blocklayer)
+    if (this.numberOfPlayers === 2) {
+      this.createCharacter(this.players.second, playerSecondStartX, playerSecondStartY, blocklayer)
+    }
+    else{
+      this.createCharacter(this.players.ai, playerSecondStartX, playerSecondStartY, blocklayer)
+    }
 
-    //explosion
-    this.players.first.isExplosionPlaying = false
-    this.players.second.isExplosionPlaying = false
+    //Játékosok irányítása billentyűkkel
+    this.players.first.keys = {
+      up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP), down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN), left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT), right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT), placeBomb: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K), explodeBomb: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L)
+    }
+    if (this.numberOfPlayers === 2) {
+      this.players.second.keys = {
+        up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W), down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S), left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A), right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D), placeBomb: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.G), explodeBomb: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.H)
+      }
+    }
 
     //Vissza lépni a menube
     this.keyEsc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
@@ -364,220 +286,37 @@ export function calculateCordinateYpx(y) {
     
     this.powerUps = this.physics.add.group()
     
+    this.nextThinkTime = 0
     
   }
-  update() {
+  update(time) {
 
-    if (this.players.first.hp === 0 || this.players.second.hp === 0)
+    if (this.players.first.hp === 0 || this.numberOfPlayers != 2 ? this.players.ai.hp === 0 : false || this.numberOfPlayers === 2 ? this.players.second.hp === 0 : false)
     {
       this.gameOver()
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keyV)) {
-      this.powerUpPutRandomly(this.players.first)
-      
+    if (Phaser.Input.Keyboard.JustDown(this.keyV)){
+      console.log(this.mapData)
     }
-
-    if (this.registry.get('numberOfPlayers') === 2) {
-      //Player 2 mozgása
-      if (this.keyA.isDown && !this.players.second.hit) {
-          this.players.second.skin.anims.play("walkLeft", true);
-          this.players.second.skin.setVelocityX(-this.playerSpeed);  
-      } else if (this.keyD.isDown && !this.players.second.hit) {
-          this.players.second.skin.anims.play("walkRight", true);
-          this.players.second.skin.setVelocityX(this.playerSpeed);
-      } else {
-          this.players.second.skin.setVelocityX(0);
-          this.players.second.skin.anims.stop();
+  
+    //Karakter mozgás
+    this.characterControl(this.players.first)
+    this.numberOfPlayers === 2 ? this.characterControl(this.players.second) : false
+    setTimeout(() => {if (time >= this.nextThinkTime){
+      this.aiMovement(this.players.ai)
+      this.nextThinkTime = time + 1000
       }
+    }, 3000)
 
-      if (this.keyW.isDown && !this.players.second.hit) {
-          this.players.second.skin.setVelocityY(-this.playerSpeed);
-          this.players.second.skin.anims.play("walkUp", true);
-      } else if (this.keyS.isDown && !this.players.second.hit) {
-          this.players.second.skin.setVelocityY(this.playerSpeed);
-          this.players.second.skin.anims.play("walkDown", true);
-      } else {
-          this.players.second.skin.setVelocityY(0);
-          this.players.second.skin.anims.stop();
-      }
 
-      //Player 1 bomba lerakása
-      if (Phaser.Input.Keyboard.JustDown(this.keyFirstPlayerPlaceBomb) && !this.players.first.bomb && this.players.first.isExplosionPlaying == false && this.players.first.bombs > 0) {
-        const result = this.bombPlace(this.players.first)
-          this.players.first.bomb = result.bomb
-          this.players.first.bombs = result.playerbombnumber
-      }
-
-      //Player 2 bomba lerakása
-      if (Phaser.Input.Keyboard.JustDown(this.keySecondPlayerPlaceBomb) && !this.players.second.bomb && this.players.second.isExplosionPlaying == false && this.players.second.bombs > 0) {
-        const result = this.bombPlace(this.players.second)
-          this.players.second.bomb = result.bomb
-          this.players.second.bombs = result.playerbombnumber
-      }
-
-      //Player 1 bomba robbantása
-      if (Phaser.Input.Keyboard.JustDown(this.keyFirstPlayerExplodeBomb) && this.players.first.bomb) {
-        this.explosion = this.physics.add.group()
-        this.players.first.isExplosionPlaying = true
-        this.explosion.create(this.players.first.bomb.x, this.players.first.bomb.y, 'explosion', 1).setOrigin(0, 0)
-        this.explosion.getChildren().forEach(explosion => {
-        if (explosion.x === this.players.first.bomb.x && explosion.y === this.players.first.bomb.y) {
-          explosion.body.allowGravity = false
-          explosion.anims.play("explosion", true)
-        }
-        })
-
-      //robbanások létrehozása a bomba körül a megadott méretig, amíg nem ütköznek falba
-      //x kordináta növelése
-        this.explosionXRangeCalculator("right", sizes.explosionSize, this.players.first.bomb.y, this.players.first.bomb.x)
-
-      //x kordináta csökkentése
-        this.explosionXRangeCalculator("left", sizes.explosionSize, this.players.first.bomb.y, this.players.first.bomb.x)
-
-      //y kordináta növelése
-        this.explosionYRangeCalculator("up", sizes.explosionSize, this.players.first.bomb.y, this.players.first.bomb.x)
-
-      //y kordináta csökkentése
-        this.explosionYRangeCalculator("down", sizes.explosionSize, this.players.first.bomb.y, this.players.first.bomb.x)
-      
-    
-      // robbanás animáció lejátszása és törlése
-      setTimeout(() => {
-        this.explosion.getChildren().slice().forEach(explosion => {
-          explosion.destroy()
-        })
-        this.players.first.isExplosionPlaying = false
-        this.players.second.hit = false
-        this.players.first.hit = false
-      }, 800)
-
-      this.players.first.bomb.destroy()
-      this.players.first.bomb = null
+    if (this.numberOfPlayers === 2){
+      this.bombHit(this.players.first, this.players.second)
+      this.bombHit(this.players.second, this.players.first)
     }
-
-    //Player 2 bomba robbantása
-      if (Phaser.Input.Keyboard.JustDown(this.keySecondPlayerExplodeBomb) && this.players.second.bomb) {
-        this.explosion = this.physics.add.group()
-        this.players.second.isExplosionPlaying = true
-        this.explosion.create(this.players.second.bomb.x, this.players.second.bomb.y, 'explosion', 1).setOrigin(0, 0)
-        this.explosion.getChildren().forEach(explosion => {
-        if (explosion.x === this.players.second.bomb.x && explosion.y === this.players.second.bomb.y) {
-          explosion.body.allowGravity = false
-          explosion.anims.play("explosion", true)
-        }
-      })
-
-      //robbanások létrehozása a bomba körül a megadott méretig, amíg nem ütköznek falba
-      //x kordináta növelése
-        this.explosionXRangeCalculator("right", sizes.explosionSize, this.players.second.bomb.y, this.players.second.bomb.x)
-
-      //x kordináta csökkentése
-        this.explosionXRangeCalculator("left", sizes.explosionSize, this.players.second.bomb.y, this.players.second.bomb.x)
-
-      //y kordináta növelése
-        this.explosionYRangeCalculator("up", sizes.explosionSize, this.players.second.bomb.y, this.players.second.bomb.x)
-
-      //y kordináta csökkentése
-        this.explosionYRangeCalculator("down", sizes.explosionSize, this.players.second.bomb.y, this.players.second.bomb.x)
-      
-    
-      // robbanás animáció lejátszása és törlése
-      setTimeout(() => {
-        this.explosion.getChildren().slice().forEach(explosion => {
-          explosion.destroy()
-        })
-        this.players.second.isExplosionPlaying = false
-        this.players.second.hit = false
-        this.players.first.hit = false
-      }, 800)
-
-      this.players.second.bomb.destroy()
-      this.players.second.bomb = null
-      }
-    }
-    else { 
-      if (Phaser.Input.Keyboard.JustDown(this.keySpace) && !this.players.first.bomb && this.players.first.isExplosionPlaying === false && this.players.first.bombs > 0) {
-          const result = this.bombPlace(this.players.first)
-          this.players.first.bomb = result.bomb
-          this.players.first.bombs = result.playerbombnumber
-      }
-
-      //Bomba robbantása
-      if (Phaser.Input.Keyboard.JustDown(this.keyE) && this.players.first.bomb) {
-        this.explosion = this.physics.add.group()
-        this.players.first.isExplosionPlaying = true
-        this.explosion.create(this.players.first.bomb.x, this.players.first.bomb.y, 'explosion', 1).setOrigin(0, 0)
-        this.explosion.getChildren().forEach(explosion => {
-          if (explosion.x === this.players.first.bomb.x && explosion.y === this.players.first.bomb.y) {
-            explosion.body.allowGravity = false
-            explosion.anims.play("explosion", true)
-          }
-        })
-
-      //robbanások létrehozása a bomba körül a megadott méretig, amíg nem ütköznek falba
-      //x kordináta növelése
-      this.explosionXRangeCalculator("right", sizes.explosionSize, this.players.first.bomb.y, this.players.first.bomb.x)
-
-      //x kordináta csökkentése
-      this.explosionXRangeCalculator("left", sizes.explosionSize, this.players.first.bomb.y, this.players.first.bomb.x)
-
-      //y kordináta növelése
-      this.explosionYRangeCalculator("up", sizes.explosionSize, this.players.first.bomb.y, this.players.first.bomb.x)
-
-      //y kordináta csökkentése
-      this.explosionYRangeCalculator("down", sizes.explosionSize, this.players.first.bomb.y, this.players.first.bomb.x)
-      
-    
-      // robbanás animáció lejátszása és törlése
-      setTimeout(() => {
-        this.explosion.getChildren().slice().forEach(explosion => {
-          explosion.destroy()
-        })
-        this.players.first.isExplosionPlaying = false
-        this.players.first.hit = false
-        this.players.second.hit = false
-      }, 800)
-
-      this.players.first.bomb.destroy()
-      this.players.first.bomb = null
-    }
-  }
-
-    if (this.players.first.hit != true && (this.players.first.isExplosionPlaying == true || this.players.second.isExplosionPlaying == true)) {
-      if (this.physics.overlap(this.players.first.skin, this.explosion) == true) {
-        this.players.first.hit = this.playerExplsoionHit(this.players.first)
-      }
-    }
-
-    if (this.registry.get('numberOfPlayers') === 2 && this.players.second.hit != true && (this.players.first.isExplosionPlaying == true || this.players.second.isExplosionPlaying == true)) {  
-      if (this.physics.overlap(this.players.second.skin, this.explosion) == true) {
-        this.players.second.hit = this.playerExplsoionHit(this.players.second)
-      }
-    }
-
-    const {left, right, up, down} = this.cursor
-
-    if (this.cursor.left.isDown && !this.players.first.hit) {
-      this.players.first.skin.anims.play("walkLeft", true);
-      this.players.first.skin.setVelocityX(-this.playerSpeed);  
-    } else if (this.cursor.right.isDown && !this.players.first.hit) {
-      this.players.first.skin.anims.play("walkRight", true);
-      this.players.first.skin.setVelocityX(this.playerSpeed);
-    } else {
-        this.players.first.skin.setVelocityX(0);
-        this.players.first.skin.anims.stop();
-    }
-
-    if (this.cursor.up.isDown && !this.players.first.hit) {
-        this.players.first.skin.setVelocityY(-this.playerSpeed);
-        this.players.first.skin.anims.play("walkUp", true);
-    } else if (this.cursor.down.isDown && !this.players.first.hit) {
-        this.players.first.skin.setVelocityY(this.playerSpeed);
-        this.players.first.skin.anims.play("walkDown", true);
-    } else {
-        this.players.first.skin.setVelocityY(0);
-        this.players.first.skin.anims.stop();
+    else{
+      this.bombHit(this.players.first, this.players.ai)
+      this.bombHit(this.players.ai, this.players.first)
     }
 
     //Powerup felvétele, bomba hozzáadása a HUD-hoz, max bombaszám ellenőrzése
@@ -585,7 +324,13 @@ export function calculateCordinateYpx(y) {
       const hitPowerUpFirstPlayer = this.powerUps.getChildren().find(powerUp => this.physics.overlap(this.players.first.skin, powerUp))
       this.players.first.bombs = this.powerUpPickUp(this.players.first, hitPowerUpFirstPlayer)
     }
-    else if (this.registry.get('numberOfPlayers') === 2 && this.powerUps.getChildren().length > 0 && this.physics.overlap(this.players.second.skin, this.powerUps) == true && this.players.second.bombs < this.maxBombNumber + this.extraBombNumber) {
+
+    if (this.numberOfPlayers != 2 && this.powerUps.getChildren().length > 0 && this.physics.overlap(this.players.ai.skin, this.powerUps) == true && this.players.ai.bombs < this.maxBombNumber + this.extraBombNumber) {
+      const hitPowerUpFirstPlayer = this.powerUps.getChildren().find(powerUp => this.physics.overlap(this.players.ai.skin, powerUp))
+      this.players.ai.bombs = this.powerUpPickUp(this.players.ai, hitPowerUpFirstPlayer)
+    }
+    
+    if (this.numberOfPlayers === 2 && this.powerUps.getChildren().length > 0 && this.physics.overlap(this.players.second.skin, this.powerUps) == true && this.players.second.bombs < this.maxBombNumber + this.extraBombNumber) {
       const hitPowerUpSecondPlayer = this.powerUps.getChildren().find(powerUp => this.physics.overlap(this.players.second.skin, powerUp))
       this.players.second.bombs = this.powerUpPickUp(this.players.second, hitPowerUpSecondPlayer)
     }
@@ -595,7 +340,7 @@ export function calculateCordinateYpx(y) {
       this.players.first.bombEmpty = this.powerUpPutRandomly(this.players.first)
     }
 
-    if (this.registry.get('numberOfPlayers') === 2 && this.players.second.bombs === 0 && this.players.first.bombEmpty === false){
+    if (this.numberOfPlayers === 2 && this.players.second.bombs === 0 && this.players.first.bombEmpty === false){
       this.players.second.bombEmpty = this.powerUpPutRandomly(this.players.second)
     }
 
@@ -603,7 +348,7 @@ export function calculateCordinateYpx(y) {
       this.players.first.bombEmpty = false
     }
 
-    if (this.registry.get('numberOfPlayers') === 2 && this.players.second.bombEmpty === true && this.players.second.bombs > 0) {
+    if (this.numberOfPlayers === 2 && this.players.second.bombEmpty === true && this.players.second.bombs > 0) {
       this.players.second.bombEmpty = false
     }
 
@@ -612,10 +357,202 @@ export function calculateCordinateYpx(y) {
           this.scene.launch('MenuScene')
           this.registry.set('previousScene', 'GameScene')
         }
+
   }
 
+  aiMovement(player){
+    let tile = this.possibleMovementTile(player)
+    let playerX = calculateCordinateXpx(calculateCordinateX(player.skin.x))
+    let playerY = calculateCordinateYpx(calculateCordinateY(player.skin.y))
+    
+    tile.sort((a, b) => b.score - a.score)
 
+    console.log('Sorted: ', tile)
 
+    if (playerX < calculateCordinateXpx(tile[0].x)){
+      while (player.skin.x < calculateCordinateXpx(tile[0].x)){
+        player.skin.x += 32
+        if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
+          this.bombExplosion(player, this.players)
+        }
+      }
+    }
+    else if (playerX > calculateCordinateXpx(tile[0].x)){
+      while (player.skin.x > calculateCordinateXpx(tile[0].x)){
+        player.skin.x -= 32
+        if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
+          this.bombExplosion(player, this.players)
+        }
+      }
+    }
+
+    if (playerY > calculateCordinateYpx(tile[0].y)){
+      while (player.skin.y > calculateCordinateYpx(tile[0].y)){
+        player.skin.y -= 32
+        if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
+          this.bombExplosion(player, this.players)
+        }
+      }
+    }else if (playerY < calculateCordinateYpx(tile[0].y)){
+      while (player.skin.y < calculateCordinateYpx(tile[0].y)){
+        player.skin.y += 32
+        if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
+          this.bombExplosion(player, this.players)
+        }
+      }
+    }
+  }
+
+  
+
+  possibleMovementTile(player){
+    const walkableTile = []
+    const directions = [
+      { x: 0, y: -1 },
+      { x: 0, y: 1 },
+      { x: -1, y: 0 },
+      { x: 1, y: 0 },
+      { x: 0, y: 0}]
+
+    for (const dir of directions ){
+      const newx = calculateCordinateX(player.skin.x) + dir.x
+      const newy = calculateCordinateY(player.skin.y) + dir.y
+
+      if (this.mapData[newy][newx] === 0) {
+        walkableTile.push({x: newx, y: newy, score: this.scoreTile(newx, newy)})
+        this.players.ai.lastVisited = { x: newx, y: newy}
+      }
+      else if (this.mapData[newy][newx] === 2)
+      {
+        if (!player.bomb && player.isExplosionPlaying === false && player.bombs > 0){
+          const result = this.bombPlace(player)
+          player.bomb = result.bomb
+          player.bombs = result.playerbombnumber
+        }
+      }
+    }
+
+    return walkableTile
+  }
+
+  scoreTile(x, y){
+    let score = 0
+    
+    score += this.bombCheck(this.players.first.bomb, x, y)
+    score += this.bombCheck(this.players.ai.bomb, x, y)
+
+    if (this.players.first.bomb) {score -= this.explosionCheck(this.players.first.bomb, x, y)}
+    if (this.players.ai.bomb) {score -= this.explosionCheck(this.players.ai.bomb, x, y)}
+
+    if (this.players.ai.lastVisited != undefined && x == this.players.ai.lastVisited.x && y == this.players.ai.lastVisited.y){
+        score -= 1
+    }
+
+    return score
+  }
+
+  bombCheck(bomb, x, y){
+    if (bomb && x == calculateCordinateX(bomb.x) && y == calculateCordinateY(bomb.y)){
+      return -1000
+    }
+    else {return 10}
+  }
+
+  explosionCheck(bomb, x, y){
+    console.log('Lefutott: ',x,y)
+    let explosionScore = 0
+    let explosionTiles = []
+    let bombx = calculateCordinateX(bomb.x)
+    let bomby = calculateCordinateY(bomb.y)
+    let right = 0, left = 0, up = 0, down = 0
+
+    for (let i = 1; i <= this.explosionSize; i++) {
+      if (right === 0 && this.mapData[bombx + i][bomby] != 1){
+        explosionTiles.push({x: bombx + i, y: bomby})
+      }else {right = 1}
+      if (left === 0 && this.mapData[bombx - i][bomby] != 1){
+        explosionTiles.push({x: bombx + i, y: bomby})
+      }else {left = 1}
+      if (down === 0 && this.mapData[bombx][bomby + i] != 1){
+        explosionTiles.push({x: bombx, y: bomby + i})
+      }else {down = 1}
+      if (up === 0 && this.mapData[bombx][bomby - i] != 1){
+        explosionTiles.push({x: bombx, y: bomby - 1})
+      }else {up = 1}
+    }
+
+    for (const tile of explosionTiles){
+      if (tile.x === x && tile.y === y){
+        explosionScore = 100
+        break
+      }
+    }
+    return explosionScore
+  }
+
+  characterControl(player){
+      if (player.keys.left.isDown && !player.hit) {
+          player.skin.anims.play("walkLeft", true);
+          player.skin.setVelocityX(-this.playerSpeed);  
+      } else if (player.keys.right.isDown && !player.hit) {
+          player.skin.anims.play("walkRight", true);
+          player.skin.setVelocityX(this.playerSpeed);
+      } else {
+          player.skin.setVelocityX(0);
+          player.skin.anims.stop();
+      }
+
+      if (player.keys.up.isDown && !player.hit) {
+          player.skin.setVelocityY(-this.playerSpeed);
+          player.skin.anims.play("walkUp", true);
+      } else if (player.keys.down.isDown && !player.hit) {
+          player.skin.setVelocityY(this.playerSpeed);
+          player.skin.anims.play("walkDown", true);
+      } else {
+          player.skin.setVelocityY(0);
+          player.skin.anims.stop();
+      }
+
+      if (player.keys.placeBomb.isDown && !player.bomb && player.isExplosionPlaying === false && player.bombs > 0) {
+          const result = this.bombPlace(player)
+          player.bomb = result.bomb
+          player.bombs = result.playerbombnumber
+      }
+
+      if (Phaser.Input.Keyboard.JustDown(player.keys.explodeBomb) && player.bomb) {
+        this.bombExplosion(player, this.players)
+      }
+  }
+
+  createPlayer(number)
+  {
+    return{number: number, skin: undefined, hp: 3, hit: false, bombs: 3, bomb: undefined, 
+           bombEmpty: false, HUD: {}, isExplosionPlaying: false, keys: undefined, lastVisited: {}}
+  }
+
+  createCharacter(player, x, y, blocklayer) {
+    player.hit = false
+    player.skin = this.physics.add.sprite(calculateCordinateXpx(x), calculateCordinateYpx(y), 'player', 4).setOrigin(0, 0)
+    player.skin.body.allowGravity = false
+    player.skin.setCollideWorldBounds(true)
+
+    //player hitbox a tile-okhoz igazítása
+    player.skin.body.setSize(24, 24)
+    player.skin.body.setOffset(4, 4)
+    
+    // player és tile-ek közötti ütközés
+    player.skin.body.setCircle(13)
+    this.physics.add.collider(player.skin, blocklayer)
+    this.physics.add.collider(player.skin, this.destroyableBlocks)
+  }
+
+  createPlayerHUD() {
+    return{
+      fill: this.add.group(),
+      empty: this.add.group()
+    }
+  }
+  
   playerExplsoionHit(player) {
       player.hp -= 1
       player.HUD.hpHUD.empty.create(player.HUD.hpHUD.fill.getChildren().slice(-1)[0].x, player.HUD.hpHUD.fill.getChildren().slice(-1)[0].y, 'hp', 1).setOrigin(0, 0).setScale(0.75)
@@ -774,6 +711,14 @@ export function calculateCordinateYpx(y) {
     })
   }
 
+  bombHit(player, enemyPlayer){
+    if (player.hit != true && (player.isExplosionPlaying == true || enemyPlayer.isExplosionPlaying == true)) {
+      if (this.physics.overlap(player.skin, this.explosion) == true) {
+        player.hit = this.playerExplsoionHit(player)
+      }
+    }
+  }
+
   bombPlace(player){
         const playerBomb = this.physics.add.sprite(calculateCordinateXpx(calculateCordinateX(player.skin.x)), calculateCordinateYpx(calculateCordinateY(player.skin.y)), 'bomb', 0).setOrigin(0, 0)
         playerBomb.body.allowGravity = false
@@ -783,12 +728,49 @@ export function calculateCordinateYpx(y) {
         const lastBomb = player.HUD.bombHUD.fill.getChildren().slice(player.bombs - 1)[0]
         this.emptyBomb(player, lastBomb)
         player.HUD.bombHUD.fill.getChildren().slice(-1)[0].destroy()
-        console.log("Bomb number: " + player.bombs)
         player.bombs--
-        console.log("Bomb number: " + player.bombs)
         return { bomb: playerBomb,
                  playerbombnumber: player.bombs 
         }
+  }
+
+  bombExplosion(player, players){
+        this.explosion = this.physics.add.group()
+        player.isExplosionPlaying = true
+        this.explosion.create(player.bomb.x, player.bomb.y, 'explosion', 1).setOrigin(0, 0)
+        this.explosion.getChildren().forEach(explosion => {
+        if (explosion.x === player.bomb.x && explosion.y === player.bomb.y) {
+          explosion.body.allowGravity = false
+          explosion.anims.play("explosion", true)
+        }
+        })
+
+      //robbanások létrehozása a bomba körül a megadott méretig, amíg nem ütköznek falba
+      //x kordináta növelése
+        this.explosionXRangeCalculator("right", this.explosionSize, player.bomb.y, player.bomb.x)
+
+      //x kordináta csökkentése
+        this.explosionXRangeCalculator("left", this.explosionSize, player.bomb.y, player.bomb.x)
+
+      //y kordináta növelése
+        this.explosionYRangeCalculator("up", this.explosionSize, player.bomb.y, player.bomb.x)
+
+      //y kordináta csökkentése
+        this.explosionYRangeCalculator("down", this.explosionSize, player.bomb.y, player.bomb.x)
+      
+    
+      // robbanás animáció lejátszása és törlése
+      setTimeout(() => {
+        this.explosion.getChildren().slice().forEach(explosion => {
+          explosion.destroy()
+        })
+        player.isExplosionPlaying = false
+        player.hit = false
+        this.numberOfPlayers === 2 ? players.second.hit = false : false
+      }, 800)
+
+      player.bomb.destroy()
+      player.bomb = undefined
   }
 
   bombCollider(player, bomb) {
@@ -822,6 +804,7 @@ export function calculateCordinateYpx(y) {
           this.destroyableBlocks.getChildren().forEach(block => {
             if (block.x === calculateCordinateXpx(calculateCordinateX(x) + (direction === "right" ? i : -i)) && block.y === calculateCordinateYpx(calculateCordinateY(y))) {
               block.destroy()
+              this.mapData[calculateCordinateY(block.y)][calculateCordinateX(block.x)] = 0
               if (this.powerUpDrop() == true) {
                 this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
                 this.powerUps.getChildren().forEach(powerUp => {
@@ -859,6 +842,7 @@ export function calculateCordinateYpx(y) {
           this.destroyableBlocks.getChildren().forEach(block => {
             if (block.x === calculateCordinateXpx(calculateCordinateX(x)) && block.y === calculateCordinateYpx(calculateCordinateY(y) + (direction === "up" ? i : -i))) {
               block.destroy()
+              this.mapData[calculateCordinateY(block.y)][calculateCordinateX(block.x)] = 0
               if (this.powerUpDrop() == true) {
                 this.powerUps.create(block.x, block.y, 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
                 this.powerUps.getChildren().forEach(powerUp => {

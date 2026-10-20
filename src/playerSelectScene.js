@@ -28,8 +28,7 @@ export class PlayerSelectScene extends Phaser.Scene {
         
                 button.on('pointerover', () => {button.setScale(0.90)})
                 button.on('pointerout', () => {button.setScale(1)})
-                button.on('pointerdown', () => {this.registry.set('numberOfPlayers', numberOfPlayers)
-                                                this.scene.stop(this.scene.key)
-                                                this.scene.start(scene)})
+                button.on('pointerdown', () => {this.scene.stop(this.scene.key)
+                                                this.scene.start(scene, { numberOfPlayers: numberOfPlayers })})
     }
 }
