@@ -57,10 +57,60 @@ export function calculateCordinateYpx(y) {
         first: this.createPlayer(1),
         ai: this.createPlayer(2)
       }
+      this.players.ai = {
+        move: undefined
+      }
+      this.players.ai.move = {
+        target: undefined,
+        isMoving: false
+      }
     }
   }
 
   preload() {
+
+    const loadingbg = this.add.graphics()
+    loadingbg.fillStyle(0x222222, 0.8)
+    loadingbg.fillRect(
+      sizes.width / 2,
+      sizes.height / 2,
+      320,
+      50
+    )
+
+    const loadingbar = this.add.graphics()
+
+    const loadingpercentage = this.add.text(
+      sizes.width / 2,
+      sizes.height / 2 + 50,
+      '0%',
+      {
+        fontSize: '20px',
+        color: '#ffffff'
+      }
+    ).setOrigin(0.5)
+
+    this.load.on('progress', (value) => {
+      loadingbar.clear()
+      loadingbar.fillStyle(0x00ff00, 1)
+      loadingbar.fillRect(
+        sizes.width / 2 - 150,
+        sizes.height / 2 - 15,
+        300* value,
+        30
+      )
+
+      loadingpercentage.setText(
+        Math.floor(value * 100) + '%'
+      )
+
+    })
+
+    this.load.once('complete', () => {
+      loadingbar.destroy()
+      loadingbg.destroy()
+      loadingpercentage.destroy()
+    })
 
     // Tile map
     this.load.spritesheet('tiles', 'assets/bomberman_tiles.png', {
@@ -262,12 +312,12 @@ export function calculateCordinateYpx(y) {
     }
 
     //Players karakter létrehozása
-    this.createCharacter(this.players.first, playerFirstStartX, playerFirstStartY, blocklayer)
+    this.createCharacter(this.players.first, 1, 1, blocklayer)
     if (this.numberOfPlayers === 2) {
       this.createCharacter(this.players.second, playerSecondStartX, playerSecondStartY, blocklayer)
     }
     else{
-      this.createCharacter(this.players.ai, playerSecondStartX, playerSecondStartY, blocklayer)
+      this.createCharacter(this.players.ai, 14, 14, blocklayer)
     }
 
     //Játékosok irányítása billentyűkkel
@@ -289,7 +339,7 @@ export function calculateCordinateYpx(y) {
     this.nextThinkTime = 0
     
   }
-  update(time) {
+  update(time, delta) {
 
     if (this.players.first.hp === 0 || this.numberOfPlayers != 2 ? this.players.ai.hp === 0 : false || this.numberOfPlayers === 2 ? this.players.second.hp === 0 : false)
     {
@@ -297,17 +347,22 @@ export function calculateCordinateYpx(y) {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyV)){
-      console.log(this.mapData)
     }
   
     //Karakter mozgás
-    this.characterControl(this.players.first)
-    this.numberOfPlayers === 2 ? this.characterControl(this.players.second) : false
-    setTimeout(() => {if (time >= this.nextThinkTime){
-      this.aiMovement(this.players.ai)
+    this.characterControl(this.players.first, this.numberOfPlayers === 2 ? this.players.second : this.players.ai)
+    this.numberOfPlayers === 2 ? this.characterControl(this.players.second, this.players.first) : false
+    if (this.numberOfPlayers != 2 && !this.players.ai.move.isMoving) {setTimeout(() => {
+      if (time >= this.nextThinkTime){
+      const result = this.possibleMovementTile(this.players.ai)
+      this.players.ai.move.target = result.tile
+      this.players.ai.move.isMoving = result.canMove
       this.nextThinkTime = time + 1000
-      }
-    }, 3000)
+      console.log("Megy")}
+    }, 3000)}
+    else {
+      this.aiMovement(this.players.ai)
+    }
 
 
     if (this.numberOfPlayers === 2){
@@ -361,19 +416,55 @@ export function calculateCordinateYpx(y) {
   }
 
   aiMovement(player){
-    let tile = this.possibleMovementTile(player)
-    let playerX = calculateCordinateXpx(calculateCordinateX(player.skin.x))
-    let playerY = calculateCordinateYpx(calculateCordinateY(player.skin.y))
-    
-    tile.sort((a, b) => b.score - a.score)
+    const tx = calculateCordinateXpx(player.move.target.x)
+    const ty = calculateCordinateYpx(player.move.target.y)
+    const dx = tx - player.skin.x
+    const dy = ty - player.skin.y
 
-    console.log('Sorted: ', tile)
+    const tolarenc = Math.max(2, this.playerSpeed * this.game.loop.delta / 1000)
 
-    if (playerX < calculateCordinateXpx(tile[0].x)){
+    if (Math.abs(dx) <= tol && Math.abs <= tol) {
+      player.skin.setVelocityX(0)
+      player.skin.setVelocityY(0)
+      player.move.isMoving = false
+    }
+
+    /*if (player.skin.x != player.move.target.x && player.skin.y != player.move.target.y){
+      if (player.skin.x > calculateCordinateXpx(player.move.target.x)){
+        player.skin.setVelocityX(-this.playerSpeed)
+        console.log("Player:",player.skin.x,player.skin.y)
+        console.log("Target:",calculateCordinateXpx(player.move.target.x),calculateCordinateYpx(player.move.target.y))
+        console.log("Megy X-:",player.move.isMoving)
+      }
+      else if (player.skin.x < calculateCordinateXpx(player.move.target.x)){
+        player.skin.setVelocityX(this.playerSpeed)
+        console.log("Player:",player.skin.x,player.skin.y)
+        console.log("Target:",calculateCordinateXpx(player.move.target.x),calculateCordinateYpx(player.move.target.y))
+        console.log("Megy X:",player.move.isMoving)
+      }
+      else {player.skin.setVelocityX(0), player.move.isMoving = false}
+      
+      if (player.skin.y < calculateCordinateYpx(player.move.target.y)){
+        player.skin.setVelocityY(this.playerSpeed)
+        console.log("Player:",player.skin.x,player.skin.y)
+        console.log("Target:",calculateCordinateXpx(player.move.target.x),calculateCordinateYpx(player.move.target.y))
+        console.log("Megy y:",player.move.isMoving)
+      }
+      else if (player.skin.y > calculateCordinateYpx(player.move.target.y)){
+        player.skin.setVelocityY(-this.playerSpeed)
+        console.log("Player:",player.skin.x,player.skin.y)
+        console.log("Target:",calculateCordinateXpx(player.move.target.x),calculateCordinateYpx(player.move.target.y))
+        console.log("Megy y-:",player.move.isMoving)
+      }
+      else {player.skin.setVelocityY(0), player.move.isMoving = false}
+    }*/
+
+
+    /*if (playerX < calculateCordinateXpx(tile[0].x)){
       while (player.skin.x < calculateCordinateXpx(tile[0].x)){
         player.skin.x += 32
         if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
-          this.bombExplosion(player, this.players)
+          this.bombExplosion(player, enemy)
         }
       }
     }
@@ -381,7 +472,7 @@ export function calculateCordinateYpx(y) {
       while (player.skin.x > calculateCordinateXpx(tile[0].x)){
         player.skin.x -= 32
         if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
-          this.bombExplosion(player, this.players)
+          this.bombExplosion(player, enemy)
         }
       }
     }
@@ -390,17 +481,17 @@ export function calculateCordinateYpx(y) {
       while (player.skin.y > calculateCordinateYpx(tile[0].y)){
         player.skin.y -= 32
         if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
-          this.bombExplosion(player, this.players)
+          this.bombExplosion(player, enemy)
         }
       }
     }else if (playerY < calculateCordinateYpx(tile[0].y)){
       while (player.skin.y < calculateCordinateYpx(tile[0].y)){
         player.skin.y += 32
         if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
-          this.bombExplosion(player, this.players)
+          this.bombExplosion(player, enemy)
         }
       }
-    }
+    }*/
   }
 
   
@@ -418,13 +509,10 @@ export function calculateCordinateYpx(y) {
       const newx = calculateCordinateX(player.skin.x) + dir.x
       const newy = calculateCordinateY(player.skin.y) + dir.y
 
-      if (this.mapData[newy][newx] === 0) {
-        walkableTile.push({x: newx, y: newy, score: this.scoreTile(newx, newy)})
-        this.players.ai.lastVisited = { x: newx, y: newy}
-      }
-      else if (this.mapData[newy][newx] === 2)
+      if (this.mapData[newy][newx] === 2)
       {
         if (!player.bomb && player.isExplosionPlaying === false && player.bombs > 0){
+          console.log("bomb")
           const result = this.bombPlace(player)
           player.bomb = result.bomb
           player.bombs = result.playerbombnumber
@@ -432,7 +520,19 @@ export function calculateCordinateYpx(y) {
       }
     }
 
-    return walkableTile
+    for (const dir of directions ){
+      const newx = calculateCordinateX(player.skin.x) + dir.x
+      const newy = calculateCordinateY(player.skin.y) + dir.y
+
+      if (this.mapData[newy][newx] === 0) {
+        walkableTile.push({x: newx, y: newy, score: this.scoreTile(newx, newy)})
+        this.players.ai.lastVisited = { x: newx, y: newy}
+      }
+    }
+
+    walkableTile.sort((a, b) => b.score - a.score)
+
+    return {tile: walkableTile[0], canMove: true}
   }
 
   scoreTile(x, y){
@@ -448,7 +548,57 @@ export function calculateCordinateYpx(y) {
         score -= 1
     }
 
+    this.players.ai.bombs < 3 ? score += this.powerupCheck(x, y) : false
+
+    this.players.first.bomb || this.players.ai.bomb ? score -= this.deadendCheck(x, y) : false 
+
     return score
+  }
+
+
+
+  deadendCheck(x, y){
+    let deadendscore = 0
+    const directions = [
+      { x: 0, y: -1 },
+      { x: 0, y: 1 },
+      { x: -1, y: 0 },
+      { x: 1, y: 0 }]
+
+    for (const dir of directions){
+      const newx = x + dir.x
+      const newy = y + dir.y
+
+      if (this.mapData[newy][newx] != 0){
+        deadendscore += 10
+      }
+    }
+
+    return deadendscore
+  }
+
+  powerupCheck(x, y){
+    let powerupScore = 0
+
+    this.powerUps.getChildren().forEach(powerUp => {
+          if (calculateCordinateX(powerUp.x) === x && calculateCordinateY(powerUp.y) === y) {    
+            switch (powerUp.frame.name){
+              case 0:
+                powerupScore += 10
+                break
+              case 1:
+                powerupScore += 11
+                break
+              case 2:
+                powerupScore += 12
+                break
+              default:
+                powerupScore = 0
+            }
+          }
+        })
+    
+    return powerupScore
   }
 
   bombCheck(bomb, x, y){
@@ -459,7 +609,6 @@ export function calculateCordinateYpx(y) {
   }
 
   explosionCheck(bomb, x, y){
-    console.log('Lefutott: ',x,y)
     let explosionScore = 0
     let explosionTiles = []
     let bombx = calculateCordinateX(bomb.x)
@@ -467,17 +616,20 @@ export function calculateCordinateYpx(y) {
     let right = 0, left = 0, up = 0, down = 0
 
     for (let i = 1; i <= this.explosionSize; i++) {
-      if (right === 0 && this.mapData[bombx + i][bomby] != 1){
+      if (right === 0 && this.mapData[bomby][bombx + i] != 1){
         explosionTiles.push({x: bombx + i, y: bomby})
       }else {right = 1}
-      if (left === 0 && this.mapData[bombx - i][bomby] != 1){
-        explosionTiles.push({x: bombx + i, y: bomby})
+
+      if (left === 0 && this.mapData[bomby][bombx - i] != 1){
+        explosionTiles.push({x: bombx - i, y: bomby})
       }else {left = 1}
-      if (down === 0 && this.mapData[bombx][bomby + i] != 1){
+
+      if (down === 0 && this.mapData[bomby + i][bombx] != 1){
         explosionTiles.push({x: bombx, y: bomby + i})
       }else {down = 1}
-      if (up === 0 && this.mapData[bombx][bomby - i] != 1){
-        explosionTiles.push({x: bombx, y: bomby - 1})
+
+      if (up === 0 && this.mapData[bomby - i][bombx] != 1){
+        explosionTiles.push({x: bombx, y: bomby - i})
       }else {up = 1}
     }
 
@@ -490,7 +642,7 @@ export function calculateCordinateYpx(y) {
     return explosionScore
   }
 
-  characterControl(player){
+  characterControl(player, enemy){
       if (player.keys.left.isDown && !player.hit) {
           player.skin.anims.play("walkLeft", true);
           player.skin.setVelocityX(-this.playerSpeed);  
@@ -520,7 +672,7 @@ export function calculateCordinateYpx(y) {
       }
 
       if (Phaser.Input.Keyboard.JustDown(player.keys.explodeBomb) && player.bomb) {
-        this.bombExplosion(player, this.players)
+        this.bombExplosion(player, enemy) 
       }
   }
 
@@ -734,7 +886,7 @@ export function calculateCordinateYpx(y) {
         }
   }
 
-  bombExplosion(player, players){
+  bombExplosion(player, enemy){
         this.explosion = this.physics.add.group()
         player.isExplosionPlaying = true
         this.explosion.create(player.bomb.x, player.bomb.y, 'explosion', 1).setOrigin(0, 0)
@@ -766,7 +918,7 @@ export function calculateCordinateYpx(y) {
         })
         player.isExplosionPlaying = false
         player.hit = false
-        this.numberOfPlayers === 2 ? players.second.hit = false : false
+        enemy.hit = false
       }, 800)
 
       player.bomb.destroy()
