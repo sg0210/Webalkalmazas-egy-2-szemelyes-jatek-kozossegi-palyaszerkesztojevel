@@ -57,9 +57,7 @@ export function calculateCordinateYpx(y) {
         first: this.createPlayer(1),
         ai: this.createPlayer(2)
       }
-      this.players.ai = {
-        move: undefined
-      }
+      this.players.ai.move = undefined
       this.players.ai.move = {
         target: undefined,
         isMoving: false
@@ -152,7 +150,6 @@ export function calculateCordinateYpx(y) {
     })
   }
   create() {
-
     const mapData = [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 2, 0, 1, 2, 2, 0, 2, 1, 0, 2, 0, 0, 1],
@@ -281,8 +278,7 @@ export function calculateCordinateYpx(y) {
     //kordinátáék számolása
     //this.scoreText = this.add.text(10, sizes.hudHeight + 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
 
-    //HUD group létrehozása
-    
+    //HUD létrehozása
     this.players.first.HUD = {hpHUD: this.createPlayerHUD(), bombHUD: this.createPlayerHUD()}
     for (let i = 0; i < this.players.first.hp; i++) {
          this.players.first.HUD.hpHUD.fill.create(0 + (5 + i * (sizes.tileSize / 1.5 + 2)), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
@@ -290,6 +286,7 @@ export function calculateCordinateYpx(y) {
     for (let i = 0; i < this.players.first.bombs; i++) {
         this.players.first.HUD.bombHUD.fill.create(0 + (5 + i * (sizes.tileSize / 1.5 + 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
     }
+
     if (this.numberOfPlayers === 2) {
       this.players.second.HUD = {hpHUD: this.createPlayerHUD(),
                                  bombHUD: this.createPlayerHUD()}
@@ -301,8 +298,7 @@ export function calculateCordinateYpx(y) {
       }
     }
     else {
-      this.players.ai.HUD = {hpHUD: this.createPlayerHUD(),
-                                 bombHUD: this.createPlayerHUD()}
+      this.players.ai.HUD = {hpHUD: this.createPlayerHUD(), bombHUD: this.createPlayerHUD()}
       for (let i = 0; i < this.players.ai.hp; i++) {
          this.players.ai.HUD.hpHUD.fill.create(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
       }
@@ -354,13 +350,14 @@ export function calculateCordinateYpx(y) {
     this.numberOfPlayers === 2 ? this.characterControl(this.players.second, this.players.first) : false
     if (this.numberOfPlayers != 2 && !this.players.ai.move.isMoving) {setTimeout(() => {
       if (time >= this.nextThinkTime){
-      const result = this.possibleMovementTile(this.players.ai)
-      this.players.ai.move.target = result.tile
-      this.players.ai.move.isMoving = result.canMove
-      this.nextThinkTime = time + 1000
-      console.log("Megy")}
+        !this.players.ai.bomb ? this.aiBombPut(this.players.ai, this.players.first) : this.aiExplodeBomb(this.players.ai)
+        const result = this.possibleMovementTile(this.players.ai)
+        this.players.ai.move.target = result.tile
+        this.players.ai.move.isMoving = result.canMove
+        this.nextThinkTime = time + 1000
+      }
     }, 3000)}
-    else {
+    else if (this.numberOfPlayers != 2) {
       this.aiMovement(this.players.ai)
     }
 
@@ -415,83 +412,111 @@ export function calculateCordinateYpx(y) {
 
   }
 
+  aiExplodeBomb(player){
+    if (this.explosionCheck(player.bomb, player.skin.x, player.skin.y) === 100){return false}
+    else{return this.bombExplosion(player, this.players.first)}
+  }
+
+  aiBombPut(player, enemy){
+    if (this.enemyAround(player, enemy) === true){
+      const result = this.bombPlace(player)
+      player.bomb = result.bomb
+      player.bombs = result.playerbombnumber
+    }
+    else if (this.neighborDestroyable(player) === true){
+      const result = this.bombPlace(player)
+      player.bomb = result.bomb
+      player.bombs = result.playerbombnumber
+    }
+  }
+
+  enemyAround(player, enemy){
+    let enemyFound = 0
+    let possibleTiles = []
+    const ex = calculateCordinateX(enemy.skin.x)
+    const ey = calculateCordinateY(enemy.skin.y)
+    const px = calculateCordinateX(player.skin.x)
+    const py = calculateCordinateY(player.skin.y)
+   
+    for (let i = 1; i <= this.explosionSize; i++){
+      let right = true, left = true, up = true, down = true
+
+      if (right === true && this.mapData[py][px + 1] != 1){
+        possibleTiles.push({x: px + 1, y: py })
+      }
+      else{right = false}
+
+      if (left === true && this.mapData[py][px - 1] != 1){
+        possibleTiles.push({x: px - 1, y: py })
+      }
+      else{left = false}
+
+      if (up === true && this.mapData[py + 1][px] != 1){
+        possibleTiles.push({x: px, y: py + 1})
+      }
+      else{up = false}
+
+      if (down === true && this.mapData[py - 1][px] != 1){
+        possibleTiles.push({x: px, y: py - 1})
+      }
+      else{down = false}
+
+    }
+
+    for (const pt of possibleTiles){
+      if (pt.x === ex && pt.y === ey){
+        enemyFound++
+      }
+    }
+
+    if (enemyFound > 0) {return true}
+    else {return false}
+  }
+
+  neighborDestroyable(player){
+    let destroyableBlocks = 0
+    const directions = [
+      { x: 0, y: -1 },
+      { x: 0, y: 1 },
+      { x: -1, y: 0 },
+      { x: 1, y: 0 }]
+
+    for (const dir of directions){
+      const newx = calculateCordinateX(player.skin.x) + dir.x
+      const newy = calculateCordinateY(player.skin.y) + dir.y
+
+      if (this.mapData[newy][newx] === 2){
+        destroyableBlocks++
+      }
+    }
+
+    if (destroyableBlocks > 0) { 
+      return true
+    }
+    else {return false} 
+
+  }
+
   aiMovement(player){
     const tx = calculateCordinateXpx(player.move.target.x)
     const ty = calculateCordinateYpx(player.move.target.y)
     const dx = tx - player.skin.x
     const dy = ty - player.skin.y
 
-    const tolarenc = Math.max(2, this.playerSpeed * this.game.loop.delta / 1000)
 
-    if (Math.abs(dx) <= tol && Math.abs <= tol) {
+    const tolarenc = Math.max(this.playerSpeed * this.game.loop.delta / 1000)
+
+    if (Math.abs(dx) <= tolarenc && Math.abs(dy) <= tolarenc) {
       player.skin.setVelocityX(0)
       player.skin.setVelocityY(0)
+      player.skin.setPosition(tx, ty)
       player.move.isMoving = false
+      return
     }
 
-    /*if (player.skin.x != player.move.target.x && player.skin.y != player.move.target.y){
-      if (player.skin.x > calculateCordinateXpx(player.move.target.x)){
-        player.skin.setVelocityX(-this.playerSpeed)
-        console.log("Player:",player.skin.x,player.skin.y)
-        console.log("Target:",calculateCordinateXpx(player.move.target.x),calculateCordinateYpx(player.move.target.y))
-        console.log("Megy X-:",player.move.isMoving)
-      }
-      else if (player.skin.x < calculateCordinateXpx(player.move.target.x)){
-        player.skin.setVelocityX(this.playerSpeed)
-        console.log("Player:",player.skin.x,player.skin.y)
-        console.log("Target:",calculateCordinateXpx(player.move.target.x),calculateCordinateYpx(player.move.target.y))
-        console.log("Megy X:",player.move.isMoving)
-      }
-      else {player.skin.setVelocityX(0), player.move.isMoving = false}
-      
-      if (player.skin.y < calculateCordinateYpx(player.move.target.y)){
-        player.skin.setVelocityY(this.playerSpeed)
-        console.log("Player:",player.skin.x,player.skin.y)
-        console.log("Target:",calculateCordinateXpx(player.move.target.x),calculateCordinateYpx(player.move.target.y))
-        console.log("Megy y:",player.move.isMoving)
-      }
-      else if (player.skin.y > calculateCordinateYpx(player.move.target.y)){
-        player.skin.setVelocityY(-this.playerSpeed)
-        console.log("Player:",player.skin.x,player.skin.y)
-        console.log("Target:",calculateCordinateXpx(player.move.target.x),calculateCordinateYpx(player.move.target.y))
-        console.log("Megy y-:",player.move.isMoving)
-      }
-      else {player.skin.setVelocityY(0), player.move.isMoving = false}
-    }*/
+    player.skin.setVelocityX(Math.abs(dx) > tolarenc ? Math.sign(dx) * this.playerSpeed : 0)
+    player.skin.setVelocityY(Math.abs(dy) > tolarenc ? Math.sign(dy) * this.playerSpeed : 0)
 
-
-    /*if (playerX < calculateCordinateXpx(tile[0].x)){
-      while (player.skin.x < calculateCordinateXpx(tile[0].x)){
-        player.skin.x += 32
-        if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
-          this.bombExplosion(player, enemy)
-        }
-      }
-    }
-    else if (playerX > calculateCordinateXpx(tile[0].x)){
-      while (player.skin.x > calculateCordinateXpx(tile[0].x)){
-        player.skin.x -= 32
-        if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
-          this.bombExplosion(player, enemy)
-        }
-      }
-    }
-
-    if (playerY > calculateCordinateYpx(tile[0].y)){
-      while (player.skin.y > calculateCordinateYpx(tile[0].y)){
-        player.skin.y -= 32
-        if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
-          this.bombExplosion(player, enemy)
-        }
-      }
-    }else if (playerY < calculateCordinateYpx(tile[0].y)){
-      while (player.skin.y < calculateCordinateYpx(tile[0].y)){
-        player.skin.y += 32
-        if (this.players.ai.bomb && this.explosionCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 0 && this.bombCheck(player.bomb, calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y)) === 10){
-          this.bombExplosion(player, enemy)
-        }
-      }
-    }*/
   }
 
   
@@ -505,20 +530,6 @@ export function calculateCordinateYpx(y) {
       { x: 1, y: 0 },
       { x: 0, y: 0}]
 
-    for (const dir of directions ){
-      const newx = calculateCordinateX(player.skin.x) + dir.x
-      const newy = calculateCordinateY(player.skin.y) + dir.y
-
-      if (this.mapData[newy][newx] === 2)
-      {
-        if (!player.bomb && player.isExplosionPlaying === false && player.bombs > 0){
-          console.log("bomb")
-          const result = this.bombPlace(player)
-          player.bomb = result.bomb
-          player.bombs = result.playerbombnumber
-        }
-      }
-    }
 
     for (const dir of directions ){
       const newx = calculateCordinateX(player.skin.x) + dir.x
@@ -531,7 +542,7 @@ export function calculateCordinateYpx(y) {
     }
 
     walkableTile.sort((a, b) => b.score - a.score)
-
+    console.log(walkableTile)
     return {tile: walkableTile[0], canMove: true}
   }
 
@@ -634,7 +645,7 @@ export function calculateCordinateYpx(y) {
     }
 
     for (const tile of explosionTiles){
-      if (tile.x === x && tile.y === y){
+      if (tile.x === calculateCordinateX(x) && tile.y === calculateCordinateY(y)){
         explosionScore = 100
         break
       }
@@ -837,10 +848,6 @@ export function calculateCordinateYpx(y) {
         }
       }
 
-      possibleTile.forEach((cordinate, rowIndex) =>{
-        console.log("ID: " + rowIndex + " X: " + cordinate.x + " Y: " + cordinate.y )
-      })
-
       /*this.powerUps.getChildren().forEach(powerUp => {
         for (let i = 0; i < possibleTile.length; i++) {
           if (powerUp.x === calculateCordinateXpx(possibleTile[i].x) && powerUp.y === calculateCordinateYpx(possibleTile[i].y)) {
@@ -858,7 +865,6 @@ export function calculateCordinateYpx(y) {
                   powerUp.body.allowGravity = false
                 })
       }*/
-      console.log("Lefutott")
       player.bombEmpty = true
     })
   }
