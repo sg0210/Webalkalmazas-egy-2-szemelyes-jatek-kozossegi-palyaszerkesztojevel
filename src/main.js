@@ -9,6 +9,7 @@ import { MenuScene } from './menuScene'
 import { PlayerSelectScene } from './playerSelectScene'
 import { GameOverScene } from './gameOverScene'
 import { MapManagment } from './mapManagment'
+import { MapSelect } from './mapSelect'
 
 const config = {
   type:Phaser.WEBGL,
@@ -21,7 +22,7 @@ const config = {
     expandParent: true,
     resizeInterval: 0
   },
-  scene: [LandScene, MapEditor, GameScene, MenuScene, PlayerSelectScene, GameOverScene, MapManagment],
+  scene: [LandScene, MapEditor, GameScene, MenuScene, PlayerSelectScene, GameOverScene, MapManagment, MapSelect],
   physics: {
     default: 'arcade',
     arcade: {

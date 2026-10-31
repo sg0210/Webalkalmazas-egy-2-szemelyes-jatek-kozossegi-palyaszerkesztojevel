@@ -6,6 +6,10 @@ export class PlayerSelectScene extends Phaser.Scene {
         super({key: 'PlayerSelectScene'})
     }
 
+    init(data){
+        this.mapData = data.mapData
+    }
+
     preload(){}
 
     create() {
@@ -29,6 +33,6 @@ export class PlayerSelectScene extends Phaser.Scene {
                 button.on('pointerover', () => {button.setScale(0.90)})
                 button.on('pointerout', () => {button.setScale(1)})
                 button.on('pointerdown', () => {this.scene.stop(this.scene.key)
-                                                this.scene.start(scene, { numberOfPlayers: numberOfPlayers })})
+                                                this.scene.start(scene, { numberOfPlayers: numberOfPlayers, mapData: this.mapData })})
     }
 }

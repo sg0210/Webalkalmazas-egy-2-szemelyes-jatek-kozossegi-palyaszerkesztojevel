@@ -14,7 +14,7 @@ export class LandScene extends Phaser.Scene {
 
     create() {
         this.add.image(0, 0, 'bg').setOrigin(0).setDisplaySize(sizes.screenWidth, sizes.screenHeight)
-        this.playButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2, 'Start', 'PlayerSelectScene')
+        this.playButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2, 'Start', 'MapSelect')
         this.editorButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 + 75, 'Editor', 'MapManagment')
 
         fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/users', {

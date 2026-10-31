@@ -12,11 +12,11 @@ export const sizes = {
 export const speedDown = 150
 
 export function calculateCordinateX(x) {
-    return Math.round(x / sizes.tileSize)
+    return Math.floor(x / sizes.tileSize)
   }
 
 export function calculateCordinateY(y) {
-    return Math.round((y - sizes.hudHeight) / sizes.tileSize)
+    return Math.floor((y - sizes.hudHeight) / sizes.tileSize)
   }
 
 export function calculateCordinateXpx(x) {
@@ -26,6 +26,14 @@ export function calculateCordinateXpx(x) {
 export function calculateCordinateYpx(y) {
     return y * sizes.tileSize + sizes.hudHeight
   }
+
+function calculateCordinateCenterX(x){
+  return Math.floor(x / sizes.tileSize)
+}
+
+function calculateCordinateCenterY(y){
+  return Math.floor((y - sizes.hudHeight) / sizes.tileSize)
+}
 
  export class GameScene extends Phaser.Scene {
   constructor() {
@@ -43,6 +51,7 @@ export function calculateCordinateYpx(y) {
     this.maxBombNumber = 3
     this.extraBombNumber = 2
     this.explosionSize = 4
+    this.mapData
   }
   
   init (data) {
@@ -57,12 +66,37 @@ export function calculateCordinateYpx(y) {
         first: this.createPlayer(1),
         ai: this.createPlayer(2)
       }
+      this.players.ai.blast = this.physics.add.group()
       this.players.ai.move = undefined
       this.players.ai.move = {
         target: undefined,
         isMoving: false
       }
     }
+
+    //Alap pálya létrehozása vagy betöltése
+    if (data.mapData === undefined || data.mapData === null ){
+      this.mapData = [
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 0, 0, 2, 0, 1, 2, 2, 0, 2, 1, 0, 2, 0, 0, 1],
+        [1, 0, 1, 0, 2, 0, 0, 2, 1, 0, 0, 2, 0, 1, 0, 1],
+        [1, 2, 0, 2, 1, 2, 0, 1, 0, 2, 1, 2, 0, 2, 2, 1],
+        [1, 0, 2, 1, 0, 0, 2, 0, 2, 0, 0, 1, 2, 0, 1, 1],
+        [1, 1, 0, 2, 2, 1, 0, 1, 0, 1, 0, 2, 0, 2, 0, 1],
+        [1, 2, 0, 1, 0, 0, 2, 2, 2, 0, 2, 0, 1, 0, 2, 1],
+        [1, 0, 2, 0, 2, 1, 0, 1, 0, 1, 2, 0, 0, 2, 0, 1],
+        [1, 2, 1, 2, 0, 0, 2, 0, 2, 0, 0, 1, 0, 1, 2, 1],
+        [1, 0, 0, 0, 1, 2, 0, 1, 0, 1, 2, 2, 2, 0, 0, 1],
+        [1, 1, 2, 1, 0, 2, 2, 0, 2, 0, 0, 1, 0, 2, 1, 1],
+        [1, 2, 0, 2, 1, 0, 1, 0, 1, 0, 1, 2, 2, 0, 2, 1],
+        [1, 0, 2, 0, 0, 2, 0, 2, 0, 2, 0, 0, 1, 2, 0, 1],
+        [1, 0, 1, 2, 1, 0, 1, 0, 1, 0, 1, 2, 0, 1, 0, 1],
+        [1, 0, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ]
+      }else{
+        this.mapData = JSON.parse(data.mapData)
+      }
   }
 
   preload() {
@@ -150,26 +184,6 @@ export function calculateCordinateYpx(y) {
     })
   }
   create() {
-    const mapData = [
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 2, 0, 1, 2, 2, 0, 2, 1, 0, 2, 0, 0, 1],
-      [1, 0, 1, 0, 2, 0, 0, 2, 1, 0, 0, 2, 0, 1, 0, 1],
-      [1, 2, 0, 2, 1, 2, 0, 1, 0, 2, 1, 2, 0, 2, 2, 1],
-      [1, 0, 2, 1, 0, 0, 2, 0, 2, 0, 0, 1, 2, 0, 1, 1],
-      [1, 1, 0, 2, 2, 1, 0, 1, 0, 1, 0, 2, 0, 2, 0, 1],
-      [1, 2, 0, 1, 0, 0, 2, 2, 2, 0, 2, 0, 1, 0, 2, 1],
-      [1, 0, 2, 0, 2, 1, 0, 1, 0, 1, 2, 0, 0, 2, 0, 1],
-      [1, 2, 1, 2, 0, 0, 2, 0, 2, 0, 0, 1, 0, 1, 2, 1],
-      [1, 0, 0, 0, 1, 2, 0, 1, 0, 1, 2, 2, 2, 0, 0, 1],
-      [1, 1, 2, 1, 0, 2, 2, 0, 2, 0, 0, 1, 0, 2, 1, 1],
-      [1, 2, 0, 2, 1, 0, 1, 0, 1, 0, 1, 2, 2, 0, 2, 1],
-      [1, 0, 2, 0, 0, 2, 0, 2, 0, 2, 0, 0, 1, 2, 0, 1],
-      [1, 0, 1, 2, 1, 0, 1, 0, 1, 0, 1, 2, 0, 1, 0, 1],
-      [1, 0, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    ]
-
-    this.mapData = mapData
 
     // Tile empty map
     const map = this.make.tilemap({
@@ -186,7 +200,7 @@ export function calculateCordinateYpx(y) {
 
     this.destroyableBlocks = this.physics.add.staticGroup()
 
-    mapData.forEach((row, y) => {
+    this.mapData.forEach((row, y) => {
       row.forEach((tile, x) => {
         if (tile === 1) { blocklayer.putTileAt(tile, x, y) }
         else if (tile === 2) {
@@ -308,12 +322,12 @@ export function calculateCordinateYpx(y) {
     }
 
     //Players karakter létrehozása
-    this.createCharacter(this.players.first, 1, 1, blocklayer)
+    this.createCharacter(this.players.first, playerFirstStartX, playerFirstStartY, blocklayer)
     if (this.numberOfPlayers === 2) {
       this.createCharacter(this.players.second, playerSecondStartX, playerSecondStartY, blocklayer)
     }
     else{
-      this.createCharacter(this.players.ai, 14, 14, blocklayer)
+      this.createCharacter(this.players.ai, playerSecondStartX, playerSecondStartY, blocklayer)
     }
 
     //Játékosok irányítása billentyűkkel
@@ -329,6 +343,7 @@ export function calculateCordinateYpx(y) {
     //Vissza lépni a menube
     this.keyEsc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
     this.keyV = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.V)
+    this.keyB = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.B)
     
     this.powerUps = this.physics.add.group()
     
@@ -343,6 +358,13 @@ export function calculateCordinateYpx(y) {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyV)){
+      this.scene.pause(this.scene.key)
+      console.log("Paused")
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.keyB)){
+      this.scene.resume(this.scene.key)
+      console.log("Start")
     }
   
     //Karakter mozgás
@@ -350,18 +372,24 @@ export function calculateCordinateYpx(y) {
     this.numberOfPlayers === 2 ? this.characterControl(this.players.second, this.players.first) : false
     if (this.numberOfPlayers != 2 && !this.players.ai.move.isMoving) {setTimeout(() => {
       if (time >= this.nextThinkTime){
-        !this.players.ai.bomb ? this.aiBombPut(this.players.ai, this.players.first) : this.aiExplodeBomb(this.players.ai)
         const result = this.possibleMovementTile(this.players.ai)
         this.players.ai.move.target = result.tile
         this.players.ai.move.isMoving = result.canMove
         this.nextThinkTime = time + 1000
       }
     }, 3000)}
-    else if (this.numberOfPlayers != 2) {
+    else if (this.numberOfPlayers != 2 && (!this.players.ai.blast || this.players.ai.blast != null)) {
       this.aiMovement(this.players.ai)
     }
 
+    if (this.numberOfPlayers != 2 && !this.players.ai.move.isMoving){
+      if (!this.players.ai.bomb && this.players.ai.isExplosionPlaying === false) {this.aiBombPut(this.players.ai, this.players.first) }
+      else if (this.players.ai.bomb && this.blastRange(this.players.ai) === true && this.bombCheck(this.players.ai.bomb, calculateCordinateX(this.players.ai.skin.x), calculateCordinateY(this.players.ai.skin.y)) === 10 ) {this.bombExplosion(this.players.ai, this.players.first)}
+    }
 
+    
+
+    //Sebződés
     if (this.numberOfPlayers === 2){
       this.bombHit(this.players.first, this.players.second)
       this.bombHit(this.players.second, this.players.first)
@@ -408,25 +436,23 @@ export function calculateCordinateYpx(y) {
           this.scene.pause('GameScene')  
           this.scene.launch('MenuScene')
           this.registry.set('previousScene', 'GameScene')
-        }
+    }
 
   }
 
-  aiExplodeBomb(player){
-    if (this.explosionCheck(player.bomb, player.skin.x, player.skin.y) === 100){return false}
-    else{return this.bombExplosion(player, this.players.first)}
+  aiCanExplodeBomb(player){
+    if (this.physics.overlap(player.skin, player.blast)){
+      return false
+    }
+    else{return true}
   }
 
   aiBombPut(player, enemy){
     if (this.enemyAround(player, enemy) === true){
-      const result = this.bombPlace(player)
-      player.bomb = result.bomb
-      player.bombs = result.playerbombnumber
+      this.bombPlace(player)
     }
     else if (this.neighborDestroyable(player) === true){
-      const result = this.bombPlace(player)
-      player.bomb = result.bomb
-      player.bombs = result.playerbombnumber
+      this.bombPlace(player)
     }
   }
 
@@ -504,7 +530,7 @@ export function calculateCordinateYpx(y) {
     const dy = ty - player.skin.y
 
 
-    const tolarenc = Math.max(this.playerSpeed * this.game.loop.delta / 1000)
+    const tolarenc = Math.max(2, this.playerSpeed * this.game.loop.delta / 1000)
 
     if (Math.abs(dx) <= tolarenc && Math.abs(dy) <= tolarenc) {
       player.skin.setVelocityX(0)
@@ -537,25 +563,27 @@ export function calculateCordinateYpx(y) {
 
       if (this.mapData[newy][newx] === 0) {
         walkableTile.push({x: newx, y: newy, score: this.scoreTile(newx, newy)})
-        this.players.ai.lastVisited = { x: newx, y: newy}
       }
     }
 
     walkableTile.sort((a, b) => b.score - a.score)
     console.log(walkableTile)
+    console.log("Player:", calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y))
+    this.players.ai.lastVisited = { x: calculateCordinateX(player.skin.x), y: calculateCordinateY(player.skin.y)}
     return {tile: walkableTile[0], canMove: true}
   }
 
   scoreTile(x, y){
     let score = 0
     
-    score += this.bombCheck(this.players.first.bomb, x, y)
-    score += this.bombCheck(this.players.ai.bomb, x, y)
+    this.players.first.bomb ? score += this.bombCheck(this.players.first.bomb, x, y) : false
+    this.players.ai.bomb ?score += this.bombCheck(this.players.ai.bomb, x, y) : false
 
     if (this.players.first.bomb) {score -= this.explosionCheck(this.players.first.bomb, x, y)}
-    if (this.players.ai.bomb) {score -= this.explosionCheck(this.players.ai.bomb, x, y)}
+    if (this.players.ai.bomb) { score -= this.explosionCheck(this.players.ai.bomb, x, y)}
 
-    if (this.players.ai.lastVisited != undefined && x == this.players.ai.lastVisited.x && y == this.players.ai.lastVisited.y){
+    console.log("Last visited:", this.players.ai.lastVisited.x, this.players.ai.lastVisited.y, "Current:", x, y)
+    if (x == this.players.ai.lastVisited.x && y == this.players.ai.lastVisited.y){
         score -= 1
     }
 
@@ -645,7 +673,7 @@ export function calculateCordinateYpx(y) {
     }
 
     for (const tile of explosionTiles){
-      if (tile.x === calculateCordinateX(x) && tile.y === calculateCordinateY(y)){
+      if (tile.x === x && tile.y === y){
         explosionScore = 100
         break
       }
@@ -677,9 +705,7 @@ export function calculateCordinateYpx(y) {
       }
 
       if (player.keys.placeBomb.isDown && !player.bomb && player.isExplosionPlaying === false && player.bombs > 0) {
-          const result = this.bombPlace(player)
-          player.bomb = result.bomb
-          player.bombs = result.playerbombnumber
+          this.bombPlace(player)
       }
 
       if (Phaser.Input.Keyboard.JustDown(player.keys.explodeBomb) && player.bomb) {
@@ -689,7 +715,7 @@ export function calculateCordinateYpx(y) {
 
   createPlayer(number)
   {
-    return{number: number, skin: undefined, hp: 3, hit: false, bombs: 3, bomb: undefined, 
+    return{number: number, skin: undefined, hp: 3, hit: false, bombs: 3, bomb: undefined, blast: undefined, 
            bombEmpty: false, HUD: {}, isExplosionPlaying: false, keys: undefined, lastVisited: {}}
   }
 
@@ -878,24 +904,56 @@ export function calculateCordinateYpx(y) {
   }
 
   bombPlace(player){
-        const playerBomb = this.physics.add.sprite(calculateCordinateXpx(calculateCordinateX(player.skin.x)), calculateCordinateYpx(calculateCordinateY(player.skin.y)), 'bomb', 0).setOrigin(0, 0)
-        playerBomb.body.allowGravity = false
-        playerBomb.body.setImmovable(true)
-        playerBomb.setCollideWorldBounds(true)
-        this.bombCollider(this.players, playerBomb)
+        player.bomb = this.physics.add.sprite(calculateCordinateXpx(calculateCordinateX(player.skin.body.x)), calculateCordinateYpx(calculateCordinateY(player.skin.body.y)), 'bomb', 0).setOrigin(0, 0)
+        player.bomb.body.allowGravity = false
+        player.bomb.body.setImmovable(true)
+        player.bomb.setCollideWorldBounds(true)
+        this.bombCollider(this.players, player.bomb)
         const lastBomb = player.HUD.bombHUD.fill.getChildren().slice(player.bombs - 1)[0]
         this.emptyBomb(player, lastBomb)
         player.HUD.bombHUD.fill.getChildren().slice(-1)[0].destroy()
         player.bombs--
-        return { bomb: playerBomb,
-                 playerbombnumber: player.bombs 
-        }
+  }
+
+  blastRange(player){
+    let blastTiles = []
+    let inRange = 0
+    let bombx = calculateCordinateX(player.bomb.x)
+    let bomby = calculateCordinateY(player.bomb.y)
+    let right = 0, left = 0, up = 0, down = 0
+
+    for (let i = 1; i <= this.explosionSize; i++) {
+      if (right === 0 && this.mapData[bomby][bombx + i] != 1){
+        blastTiles.push({x: bombx + i , y: bomby})
+      }else {right = 1}
+
+      if (left === 0 && this.mapData[bomby][bombx - i] != 1){
+        blastTiles.push({x: bombx - i , y: bomby})
+      }else {left = 1}
+
+      if (down === 0 && this.mapData[bomby + i][bombx] != 1){
+        blastTiles.push({x: bombx, y: bomby + i})
+      }else {down = 1}
+
+      if (up === 0 && this.mapData[bomby - i][bombx] != 1){
+        blastTiles.push({x: bombx, y: bomby - i})
+      }else {up = 1}
+    }
+    console.log(blastTiles, "Player", calculateCordinateX(player.skin.x + player.skin.body.width), calculateCordinateY(player.skin.y + player.skin.body.height))
+    for (let blast of blastTiles){
+      if (blast.x == calculateCordinateX(player.skin.x + player.skin.body.width) && blast.y == calculateCordinateY(player.skin.y + player.skin.body.height)){
+        inRange++
+      }
+    }
+
+    if (inRange > 0) {return false}
+    else{return true}
   }
 
   bombExplosion(player, enemy){
         this.explosion = this.physics.add.group()
         player.isExplosionPlaying = true
-        this.explosion.create(player.bomb.x, player.bomb.y, 'explosion', 1).setOrigin(0, 0)
+        this.explosion.create(player.bomb.x, player.bomb.y, 'explosion', 1,).setOrigin(0, 0)
         this.explosion.getChildren().forEach(explosion => {
         if (explosion.x === player.bomb.x && explosion.y === player.bomb.y) {
           explosion.body.allowGravity = false

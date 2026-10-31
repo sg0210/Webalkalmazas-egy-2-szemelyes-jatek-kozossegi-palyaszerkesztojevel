@@ -133,6 +133,17 @@ app.post('/maps/get', (req, res) => {
     
 })
 
+app.get('/maps/published', (req, res) => {
+
+    try {
+        const maps = db.prepare(`Select * FROM maps WHERE published = ?`).all(1)
+        res.json({success: true, maps})
+    } catch (err) {
+        res.status(500).json({error: err.message})
+    }
+    
+})
+
 app.post('/map/get', (req, res) => {
     const { map_id } = req.body
 
