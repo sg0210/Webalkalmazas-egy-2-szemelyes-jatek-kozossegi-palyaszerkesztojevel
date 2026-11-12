@@ -1,9 +1,10 @@
 import Phaser from "phaser"
+import { sizes } from "./gameScene"
 
 export class MapSelect extends Phaser.Scene {
     constructor(){
          super({key: 'MapSelect'})
-         this.cardHeight = 135
+         this.cardHeight = 150
          this.cardWidth = 100
          this.gap = 15
     }
@@ -87,7 +88,7 @@ export class MapSelect extends Phaser.Scene {
     createCard(map, i, width, height){
         let row = 0
         let column = 0
-        const gap = this.gap
+        const gap = 15
         
         if (i % 4 === 0){
             row = i / 4
@@ -100,8 +101,8 @@ export class MapSelect extends Phaser.Scene {
         const xseperator = (width + gap) * column
         const yseperator = (height + gap) * row
 
-        const card = this.add.container(10 + xseperator, 15 +yseperator)
-        const bg = this.add.rectangle(10, 50 , width, height, 0x2c3e50).setOrigin(0, 0)
+        const card = this.add.container(10 + xseperator, 15 + yseperator)
+        const bg = this.add.rectangle(10, 50 , width, height, 0x2c3e50).setOrigin(0, 0).setRounded(3)
         const picture = this.add.image(15, 55 , map.picture).setDisplaySize(90, 90).setOrigin(0, 0)
         const title = this.add.text(15, 145 , map.title).setOrigin(0, 0)
         const id = this.add.text(title.width + 35, 145 , map.id).setOrigin(0, 0)

@@ -12,6 +12,7 @@ export const sizes = {
 export const speedDown = 150
 
 export function calculateCordinateX(x) {
+
     return Math.floor(x / sizes.tileSize)
   }
 
@@ -27,12 +28,13 @@ export function calculateCordinateYpx(y) {
     return y * sizes.tileSize + sizes.hudHeight
   }
 
-function calculateCordinateCenterX(x){
-  return Math.floor(x / sizes.tileSize)
-}
-
-function calculateCordinateCenterY(y){
-  return Math.floor((y - sizes.hudHeight) / sizes.tileSize)
+function setLimits(a){
+  if (a > sizes.tileSize - 2){
+    a = sizes.tileSize - 2
+  }
+  else if (a < 1){
+    a = 1
+  }
 }
 
  export class GameScene extends Phaser.Scene {
@@ -157,7 +159,7 @@ function calculateCordinateCenterY(y){
     })
 
     // Player sprite
-    this.load.spritesheet('player', 'assets/player_movement.png', {
+    this.load.spritesheet('player', 'assets/red_move_anim.png', {
       frameWidth: sizes.tileSize,
       frameHeight: sizes.tileSize,
     })
@@ -250,28 +252,28 @@ function calculateCordinateCenterY(y){
     //player mozgás animáció
     const walkUp = {
       key:"walkUp",
-      frames: this.anims.generateFrameNumbers("player", {frames:[0,1,2,3]}),
+      frames: this.anims.generateFrameNumbers("player", {frames:[0,1,2,3,4,5]}),
       frameRate:8,
       repeat:-1
     }
 
     const walkDown = {
       key:"walkDown",
-      frames: this.anims.generateFrameNumbers("player", {frames:[4,5,6,7]}),
+      frames: this.anims.generateFrameNumbers("player", {frames:[6,7,8,9,10,11]}),
       frameRate:8,
       repeat:-1
     }
 
     const walkLeft = {
       key:"walkLeft",
-      frames: this.anims.generateFrameNumbers("player", {frames:[8,9,10,11]}),
+      frames: this.anims.generateFrameNumbers("player", {frames:[12,13,14,15,16,17]}),
       frameRate:8,
       repeat:-1
     }
 
     const walkRight = {
       key:"walkRight",
-      frames: this.anims.generateFrameNumbers("player", {frames:[12,13,14,15]}),
+      frames: this.anims.generateFrameNumbers("player", {frames:[18,19,20,21,22,23]}),
       frameRate:8,
       repeat:-1
     }
@@ -322,12 +324,12 @@ function calculateCordinateCenterY(y){
     }
 
     //Players karakter létrehozása
-    this.createCharacter(this.players.first, playerFirstStartX, playerFirstStartY, blocklayer)
+    this.createCharacter(this.players.first, 14, 14, blocklayer)
     if (this.numberOfPlayers === 2) {
       this.createCharacter(this.players.second, playerSecondStartX, playerSecondStartY, blocklayer)
     }
     else{
-      this.createCharacter(this.players.ai, playerSecondStartX, playerSecondStartY, blocklayer)
+      this.createCharacter(this.players.ai, 1, 1, blocklayer)
     }
 
     //Játékosok irányítása billentyűkkel
@@ -354,6 +356,7 @@ function calculateCordinateCenterY(y){
 
     if (this.players.first.hp === 0 || this.numberOfPlayers != 2 ? this.players.ai.hp === 0 : false || this.numberOfPlayers === 2 ? this.players.second.hp === 0 : false)
     {
+      console.log("Gameover")
       this.gameOver()
     }
 
@@ -383,7 +386,7 @@ function calculateCordinateCenterY(y){
     }
 
     if (this.numberOfPlayers != 2 && !this.players.ai.move.isMoving){
-      if (!this.players.ai.bomb && this.players.ai.isExplosionPlaying === false) {this.aiBombPut(this.players.ai, this.players.first) }
+      if (!this.players.ai.bomb && this.players.ai.isExplosionPlaying === false && this.players.ai.bombs > 0 ) {this.aiBombPut(this.players.ai, this.players.first) }
       else if (this.players.ai.bomb && this.blastRange(this.players.ai) === true && this.bombCheck(this.players.ai.bomb, calculateCordinateX(this.players.ai.skin.x), calculateCordinateY(this.players.ai.skin.y)) === 10 ) {this.bombExplosion(this.players.ai, this.players.first)}
     }
 
@@ -448,10 +451,10 @@ function calculateCordinateCenterY(y){
   }
 
   aiBombPut(player, enemy){
-    if (this.enemyAround(player, enemy) === true){
+    if (this.enemyAround(player, enemy)){
       this.bombPlace(player)
     }
-    else if (this.neighborDestroyable(player) === true){
+    else if (this.neighborDestroyable(player)){
       this.bombPlace(player)
     }
   }
@@ -463,30 +466,29 @@ function calculateCordinateCenterY(y){
     const ey = calculateCordinateY(enemy.skin.y)
     const px = calculateCordinateX(player.skin.x)
     const py = calculateCordinateY(player.skin.y)
+    let right = true, left = true, up = true, down = true
    
     for (let i = 1; i <= this.explosionSize; i++){
-      let right = true, left = true, up = true, down = true
 
-      if (right === true && this.mapData[py][px + 1] != 1){
-        possibleTiles.push({x: px + 1, y: py })
+      if (right === true && this.mapData[py][px + i] != 1){
+        possibleTiles.push({x: px + i, y: py })
       }
       else{right = false}
 
-      if (left === true && this.mapData[py][px - 1] != 1){
-        possibleTiles.push({x: px - 1, y: py })
+      if (left === true && this.mapData[py][px - i] != 1){
+        possibleTiles.push({x: px - i, y: py })
       }
       else{left = false}
 
-      if (up === true && this.mapData[py + 1][px] != 1){
-        possibleTiles.push({x: px, y: py + 1})
+      if (up === true && this.mapData[py + i][px] != 1){
+        possibleTiles.push({x: px, y: py + i})
       }
       else{up = false}
 
-      if (down === true && this.mapData[py - 1][px] != 1){
-        possibleTiles.push({x: px, y: py - 1})
+      if (down === true && this.mapData[py - i][px] != 1){
+        possibleTiles.push({x: px, y: py - i})
       }
       else{down = false}
-
     }
 
     for (const pt of possibleTiles){
@@ -587,6 +589,9 @@ function calculateCordinateCenterY(y){
         score -= 1
     }
 
+    console.log(this.enemyDistance(x, y, this.players.first))
+    score -= this.enemyDistance(x, y, this.players.first)
+
     this.players.ai.bombs < 3 ? score += this.powerupCheck(x, y) : false
 
     this.players.first.bomb || this.players.ai.bomb ? score -= this.deadendCheck(x, y) : false 
@@ -594,7 +599,11 @@ function calculateCordinateCenterY(y){
     return score
   }
 
-
+  enemyDistance(x, y, enemy){
+    const ex = calculateCordinateX(enemy.skin.x)
+    const ey = calculateCordinateY(enemy.skin.y)
+    return Math.abs(ex - x) + Math.abs(ey - y)
+  }
 
   deadendCheck(x, y){
     let deadendscore = 0
@@ -721,7 +730,7 @@ function calculateCordinateCenterY(y){
 
   createCharacter(player, x, y, blocklayer) {
     player.hit = false
-    player.skin = this.physics.add.sprite(calculateCordinateXpx(x), calculateCordinateYpx(y), 'player', 4).setOrigin(0, 0)
+    player.skin = this.physics.add.sprite(calculateCordinateXpx(x), calculateCordinateYpx(y), 'player', 0).setOrigin(0, 0)
     player.skin.body.allowGravity = false
     player.skin.setCollideWorldBounds(true)
 
