@@ -9,7 +9,7 @@ export const sizes = {
         hudHeight:50
     }
 
-export const speedDown = 150
+export const speedDown = 100
 
 export function calculateCordinateX(x) {
 
@@ -102,49 +102,6 @@ function setLimits(a){
   }
 
   preload() {
-
-    const loadingbg = this.add.graphics()
-    loadingbg.fillStyle(0x222222, 0.8)
-    loadingbg.fillRect(
-      sizes.width / 2,
-      sizes.height / 2,
-      320,
-      50
-    )
-
-    const loadingbar = this.add.graphics()
-
-    const loadingpercentage = this.add.text(
-      sizes.width / 2,
-      sizes.height / 2 + 50,
-      '0%',
-      {
-        fontSize: '20px',
-        color: '#ffffff'
-      }
-    ).setOrigin(0.5)
-
-    this.load.on('progress', (value) => {
-      loadingbar.clear()
-      loadingbar.fillStyle(0x00ff00, 1)
-      loadingbar.fillRect(
-        sizes.width / 2 - 150,
-        sizes.height / 2 - 15,
-        300* value,
-        30
-      )
-
-      loadingpercentage.setText(
-        Math.floor(value * 100) + '%'
-      )
-
-    })
-
-    this.load.once('complete', () => {
-      loadingbar.destroy()
-      loadingbg.destroy()
-      loadingpercentage.destroy()
-    })
 
     // Tile map
     this.load.spritesheet('tiles', 'assets/bomberman_tiles.png', {
@@ -252,29 +209,41 @@ function setLimits(a){
     //player mozgás animáció
     const walkUp = {
       key:"walkUp",
-      frames: this.anims.generateFrameNumbers("player", {frames:[0,1,2,3,4,5]}),
-      frameRate:8,
+      frames: this.anims.generateFrameNumbers("player", {
+        start: 6,
+        end: 11
+      }),
+      duration: 833,
       repeat:-1
     }
 
     const walkDown = {
       key:"walkDown",
-      frames: this.anims.generateFrameNumbers("player", {frames:[6,7,8,9,10,11]}),
-      frameRate:8,
+      frames: this.anims.generateFrameNumbers("player", {
+        start: 0,
+        end: 5
+      }),
+      duration: 833,
       repeat:-1
     }
 
     const walkLeft = {
       key:"walkLeft",
-      frames: this.anims.generateFrameNumbers("player", {frames:[12,13,14,15,16,17]}),
-      frameRate:8,
+      frames: this.anims.generateFrameNumbers("player", {
+        start: 12,
+        end: 17 
+      }),
+      duration: 833,
       repeat:-1
     }
 
     const walkRight = {
       key:"walkRight",
-      frames: this.anims.generateFrameNumbers("player", {frames:[18,19,20,21,22,23]}),
-      frameRate:8,
+      frames: this.anims.generateFrameNumbers("player", {
+        start: 18,
+        end: 23
+      }),
+      duration: 833,
       repeat:-1
     }
 
@@ -290,6 +259,8 @@ function setLimits(a){
     this.anims.create(walkLeft)
     this.anims.create(walkRight)
     this.anims.create(explosion)
+
+    this.explosion = this.physics.add.group()
 
     //kordinátáék számolása
     //this.scoreText = this.add.text(10, sizes.hudHeight + 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
@@ -324,12 +295,12 @@ function setLimits(a){
     }
 
     //Players karakter létrehozása
-    this.createCharacter(this.players.first, 14, 14, blocklayer)
+    this.createCharacter(this.players.first, playerFirstStartX, playerFirstStartY, blocklayer)
     if (this.numberOfPlayers === 2) {
       this.createCharacter(this.players.second, playerSecondStartX, playerSecondStartY, blocklayer)
     }
     else{
-      this.createCharacter(this.players.ai, 1, 1, blocklayer)
+      this.createCharacter(this.players.ai, playerSecondStartX, playerSecondStartY, blocklayer)
     }
 
     //Játékosok irányítása billentyűkkel
@@ -349,30 +320,26 @@ function setLimits(a){
     
     this.powerUps = this.physics.add.group()
     
-    this.nextThinkTime = 0
-    
+    this.nextThinkTime = 0    
   }
   update(time, delta) {
+    console.log(this.numberOfPlayers, this.players.first.hp)
 
-    if (this.players.first.hp === 0 || this.numberOfPlayers != 2 ? this.players.ai.hp === 0 : false || this.numberOfPlayers === 2 ? this.players.second.hp === 0 : false)
+    if (this.players.first.hp === 0 || (this.numberOfPlayers === 1 ? this.players.ai.hp === 0 : this.players.second.hp === 0))
     {
       console.log("Gameover")
       this.gameOver()
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyV)){
-      this.scene.pause(this.scene.key)
-      console.log("Paused")
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keyB)){
-      this.scene.resume(this.scene.key)
-      console.log("Start")
-    }
   
     //Karakter mozgás
     this.characterControl(this.players.first, this.numberOfPlayers === 2 ? this.players.second : this.players.ai)
+    
     this.numberOfPlayers === 2 ? this.characterControl(this.players.second, this.players.first) : false
+    
     if (this.numberOfPlayers != 2 && !this.players.ai.move.isMoving) {setTimeout(() => {
       if (time >= this.nextThinkTime){
         const result = this.possibleMovementTile(this.players.ai)
@@ -419,13 +386,13 @@ function setLimits(a){
     }
 
     //Powerup random lerakása a játékos körül, ha elfogy a bombák száma
-    if (this.players.first.bombs === 0 && this.players.first.bombEmpty === false){
+    /*if (this.players.first.bombs === 0 && this.players.first.bombEmpty === false){
       this.players.first.bombEmpty = this.powerUpPutRandomly(this.players.first)
-    }
+    }*/
 
-    if (this.numberOfPlayers === 2 && this.players.second.bombs === 0 && this.players.first.bombEmpty === false){
+    /*if (this.numberOfPlayers === 2 && this.players.second.bombs === 0 && this.players.first.bombEmpty === false){
       this.players.second.bombEmpty = this.powerUpPutRandomly(this.players.second)
-    }
+    }*/
 
     if (this.players.first.bombEmpty === true && this.players.first.bombs > 0) {
       this.players.first.bombEmpty = false
@@ -569,8 +536,6 @@ function setLimits(a){
     }
 
     walkableTile.sort((a, b) => b.score - a.score)
-    console.log(walkableTile)
-    console.log("Player:", calculateCordinateX(player.skin.x), calculateCordinateY(player.skin.y))
     this.players.ai.lastVisited = { x: calculateCordinateX(player.skin.x), y: calculateCordinateY(player.skin.y)}
     return {tile: walkableTile[0], canMove: true}
   }
@@ -584,12 +549,10 @@ function setLimits(a){
     if (this.players.first.bomb) {score -= this.explosionCheck(this.players.first.bomb, x, y)}
     if (this.players.ai.bomb) { score -= this.explosionCheck(this.players.ai.bomb, x, y)}
 
-    console.log("Last visited:", this.players.ai.lastVisited.x, this.players.ai.lastVisited.y, "Current:", x, y)
     if (x == this.players.ai.lastVisited.x && y == this.players.ai.lastVisited.y){
         score -= 1
     }
 
-    console.log(this.enemyDistance(x, y, this.players.first))
     score -= this.enemyDistance(x, y, this.players.first)
 
     this.players.ai.bombs < 3 ? score += this.powerupCheck(x, y) : false
@@ -691,27 +654,25 @@ function setLimits(a){
   }
 
   characterControl(player, enemy){
-      if (player.keys.left.isDown && !player.hit) {
-          player.skin.anims.play("walkLeft", true);
-          player.skin.setVelocityX(-this.playerSpeed);  
-      } else if (player.keys.right.isDown && !player.hit) {
-          player.skin.anims.play("walkRight", true);
-          player.skin.setVelocityX(this.playerSpeed);
-      } else {
-          player.skin.setVelocityX(0);
-          player.skin.anims.stop();
-      }
+    player.skin.setVelocity(0);
 
-      if (player.keys.up.isDown && !player.hit) {
+    if (!player.hit){
+      if (player.keys.left.isDown) {
+          player.skin.setVelocityX(-this.playerSpeed);
+          player.skin.anims.play("walkLeft", true);
+      } else if (player.keys.right.isDown) {
+          player.skin.setVelocityX(this.playerSpeed);  
+          player.skin.anims.play("walkRight", true);
+      } else if (player.keys.up.isDown) {
           player.skin.setVelocityY(-this.playerSpeed);
           player.skin.anims.play("walkUp", true);
-      } else if (player.keys.down.isDown && !player.hit) {
+      } else if (player.keys.down.isDown) {
           player.skin.setVelocityY(this.playerSpeed);
           player.skin.anims.play("walkDown", true);
       } else {
-          player.skin.setVelocityY(0);
           player.skin.anims.stop();
       }
+    }
 
       if (player.keys.placeBomb.isDown && !player.bomb && player.isExplosionPlaying === false && player.bombs > 0) {
           this.bombPlace(player)
@@ -948,7 +909,7 @@ function setLimits(a){
         blastTiles.push({x: bombx, y: bomby - i})
       }else {up = 1}
     }
-    console.log(blastTiles, "Player", calculateCordinateX(player.skin.x + player.skin.body.width), calculateCordinateY(player.skin.y + player.skin.body.height))
+
     for (let blast of blastTiles){
       if (blast.x == calculateCordinateX(player.skin.x + player.skin.body.width) && blast.y == calculateCordinateY(player.skin.y + player.skin.body.height)){
         inRange++
@@ -960,11 +921,11 @@ function setLimits(a){
   }
 
   bombExplosion(player, enemy){
-        this.explosion = this.physics.add.group()
         player.isExplosionPlaying = true
         this.explosion.create(player.bomb.x, player.bomb.y, 'explosion', 1,).setOrigin(0, 0)
         this.explosion.getChildren().forEach(explosion => {
         if (explosion.x === player.bomb.x && explosion.y === player.bomb.y) {
+          explosion.playerID = player.number
           explosion.body.allowGravity = false
           explosion.anims.play("explosion", true)
         }
@@ -972,26 +933,34 @@ function setLimits(a){
 
       //robbanások létrehozása a bomba körül a megadott méretig, amíg nem ütköznek falba
       //x kordináta növelése
-        this.explosionXRangeCalculator("right", this.explosionSize, player.bomb.y, player.bomb.x)
+        this.explosionXRangeCalculator("right", this.explosionSize, player.bomb.y, player.bomb.x, player.number)
 
       //x kordináta csökkentése
-        this.explosionXRangeCalculator("left", this.explosionSize, player.bomb.y, player.bomb.x)
+        this.explosionXRangeCalculator("left", this.explosionSize, player.bomb.y, player.bomb.x, player.number)
 
       //y kordináta növelése
-        this.explosionYRangeCalculator("up", this.explosionSize, player.bomb.y, player.bomb.x)
+        this.explosionYRangeCalculator("up", this.explosionSize, player.bomb.y, player.bomb.x, player.number)
 
       //y kordináta csökkentése
-        this.explosionYRangeCalculator("down", this.explosionSize, player.bomb.y, player.bomb.x)
+        this.explosionYRangeCalculator("down", this.explosionSize, player.bomb.y, player.bomb.x, player.number)
+
+        
       
     
       // robbanás animáció lejátszása és törlése
       setTimeout(() => {
         this.explosion.getChildren().slice().forEach(explosion => {
-          explosion.destroy()
+          if (explosion.playerID === player.number){
+            if (this.physics.overlap(player.skin, explosion) && player.hit){
+              player.hit = false
+            }
+            if (this.physics.overlap(enemy.skin, explosion) && enemy.hit){
+              enemy.hit = false
+            }
+            explosion.destroy()
+          }
         })
         player.isExplosionPlaying = false
-        player.hit = false
-        enemy.hit = false
       }, 800)
 
       player.bomb.destroy()
@@ -1022,7 +991,7 @@ function setLimits(a){
       player.HUD.bombHUD.empty.getChildren().slice(-1)[0].destroy()
   }
 
-  explosionXRangeCalculator(direction, explosionSize, y, x) {
+  explosionXRangeCalculator(direction, explosionSize, y, x, id) {
 
     for (let i = 1; i < explosionSize; i++) {
         if (this.mapData[calculateCordinateY(y)][calculateCordinateX(x) + (direction === "right" ? i : -i)] === 2) {
@@ -1042,6 +1011,7 @@ function setLimits(a){
           this.explosion.create(calculateCordinateXpx(calculateCordinateX(x) + (direction === "right" ? i : -i)), calculateCordinateYpx(calculateCordinateY(y)), 'explosion', 1).setOrigin(0, 0)
           this.explosion.getChildren().forEach(explosion => {
           if(explosion.x === calculateCordinateXpx(calculateCordinateX(x) + (direction === "right" ? i : -i))  && explosion.y === calculateCordinateYpx(calculateCordinateY(y))) {
+              explosion.playerID = id
               explosion.body.allowGravity = false
               explosion.anims.play("explosion", true)
             }
@@ -1051,6 +1021,7 @@ function setLimits(a){
             this.explosion.create(calculateCordinateXpx(calculateCordinateX(x) + (direction === "right" ? i : -i)), calculateCordinateYpx(calculateCordinateY(y)), 'explosion', 1).setOrigin(0, 0)
             this.explosion.getChildren().forEach(explosion => {
               if(explosion.x === calculateCordinateXpx(calculateCordinateX(x) + (direction === "right" ? i : -i)) && explosion.y === calculateCordinateYpx(calculateCordinateY(y))) {
+                explosion.playerID = id
                 explosion.body.allowGravity = false
                 explosion.anims.play("explosion", true)
               }
@@ -1060,7 +1031,7 @@ function setLimits(a){
       }
   }
 
-  explosionYRangeCalculator(direction, explosionSize, y, x) {
+  explosionYRangeCalculator(direction, explosionSize, y, x, id) {
     
    for (let i = 1; i < explosionSize; i++) {
         if (this.mapData[calculateCordinateY(y) + (direction === "up" ? i : -i)][calculateCordinateX(x)] === 2) {
@@ -1080,6 +1051,7 @@ function setLimits(a){
           this.explosion.create(calculateCordinateXpx(calculateCordinateX(x)), calculateCordinateYpx(calculateCordinateY(y) + (direction === "up" ? i : -i)), 'explosion', 1).setOrigin(0, 0)
           this.explosion.getChildren().forEach(explosion => {
           if(explosion.x === calculateCordinateXpx(calculateCordinateX(x)) && explosion.y === calculateCordinateYpx(calculateCordinateY(y) + (direction === "up" ? i : -i))) {
+              explosion.playerID = id
               explosion.body.allowGravity = false
               explosion.anims.play("explosion", true)
             }
@@ -1089,6 +1061,7 @@ function setLimits(a){
             this.explosion.create(calculateCordinateXpx(calculateCordinateX(x)), calculateCordinateYpx(calculateCordinateY(y) + (direction === "up" ? i : -i)), 'explosion', 1).setOrigin(0, 0)
             this.explosion.getChildren().forEach(explosion => {
               if(explosion.x === calculateCordinateXpx(calculateCordinateX(x)) && explosion.y === calculateCordinateYpx(calculateCordinateY(y) + (direction === "up" ? i : -i))) {
+                explosion.playerID = id
                 explosion.body.allowGravity = false
                 explosion.anims.play("explosion", true)
               }

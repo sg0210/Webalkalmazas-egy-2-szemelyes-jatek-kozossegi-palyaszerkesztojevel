@@ -1,15 +1,18 @@
 import Phaser from "phaser"
 import { LandScene } from "./landScene"
+import { sizes } from "./gameScene"
 
 export class MapManagment extends Phaser.Scene {
     constructor(){
          super({key: 'MapManagment'})
-         this.cardHeight = 135
-         this.cardWidth = 100
+         this.cardHeight = 150
+         this.cardWidth
          this.gap = 15
+         this.columnNumber = 3
     }
 
     preload(){
+        
         
     }
 
@@ -25,9 +28,10 @@ export class MapManagment extends Phaser.Scene {
         const data = await response.json()
 
         const maps = data.maps
+        console.log(maps)
 
-        const header = this.add.rectangle(0, 0, this.scale.width, 50, 0x2c3e50).setOrigin(0, 0)
-        header.setDepth(10)
+        this.header = this.add.rectangle(0, 0, this.scale.width, 50, 0x2c3e50).setOrigin(0, 0)
+        this.header.setDepth(10)
 
         const backButton = this.add.text(10, 10, "Back", {
             fontFamily: 'Arial',
@@ -60,73 +64,89 @@ export class MapManagment extends Phaser.Scene {
         })
 
         maps.forEach((map, i) => {
-            const card = this.createCard(map, i, this.cardWidth, this.cardHeight)
+            const card = this.createCard(map, i, this.cardHeight)
             this.list.add(card)
         })
 
-
-        this.load.once('complete', () => {
-            maps.forEach((map, i) => {
-                const card = this.createCard(map, i, this.cardWidth, this.cardHeight)
-                this.list.add(card)
-            })
-        })
-        this.load.start()
-       
+        const newCard = this.createCardNew(this.cardHeight)
+        this.list.add(newCard)
 
         //scrolling
         
         this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
-            const minY = ((this.cardHeight + this.gap) * Math.ceil(maps.length / 4) + this.gap - this.scale.height + 50)
-            if ((this.cardHeight + this.gap) * Math.ceil(maps.length / 4) + this.gap < this.scale.height - 50) return
+            const minY = ((this.cardHeight + this.gap) * Math.ceil(maps.length / this.columnNumber) + this.gap - this.scale.height + 50)
+            if ((this.cardHeight + this.gap) * Math.ceil(maps.length / this.columnNumber) + this.gap < this.scale.height - 50) return
             this.list.y = Phaser.Math.Clamp(this.list.y - deltaY * 0.3, -minY, 0)
         });
 
     }    
 
     update(){
-
     }
 
-    createCard(map, i, width, height){
+    createCardNew(height){
+        let orderNumber = this.list.length
+        let column = orderNumber % this.columnNumber
         let row = 0
-        let column = 0
-        const gap = this.gap
-        
-        if (i % 4 === 0){
-            row = i / 4
+
+        if (orderNumber % this.columnNumber === 0){
+            row = orderNumber / this.columnNumber
         }else { 
-            row = parseInt(i / 4)
+            row = parseInt(orderNumber / this.columnNumber)
         }
 
-        column = (i % 4)
+        const xseperator = (this.cardWidth + this.gap) * column
+        const yseperator = (height + this.gap) * row
 
-        const xseperator = (width + gap) * column
-        const yseperator = (height + gap) * row
+        const card = this.add.container(this.gap + xseperator, (this.gap + this.header.height) + yseperator).setSize(this.cardWidth, height)
+        const bg = this.add.rectangle(0, 0, this.cardWidth, height, 0x2c3e50).setOrigin(0, 0)
+        const plus = this.add.text(bg.width / 2, bg.height / 2, "+").setOrigin(0.5, 0.5)
+        const title = this.add.text(bg.width / 2, bg.height / 2 + 10, "New Map").setOrigin(0.5, 0.5)
+        card.add([bg, plus, title])
+        card.setInteractive({useHandCursor: true})
+        .on('pointerdown', () => this.scene.start('MapEditor'))
+        return card
+    }
 
-        const card = this.add.container(10 + xseperator, 15 +yseperator)
-        const bg = this.add.rectangle(10, 50 , width, height, 0x2c3e50).setOrigin(0, 0)
-        const picture = this.add.image(15, 55 , map.picture).setDisplaySize(90, 90).setOrigin(0, 0)
-        const title = this.add.text(15, 145 , map.title).setOrigin(0, 0)
-        const id = this.add.text(title.width + 35, 145 , map.id).setOrigin(0, 0)
-        const editButton = this.buttonDesign(15, 155)
+    createCard(map, i, height){
+        this.cardWidth = (sizes.screenWidth - ((this.columnNumber + 1) * this.gap)) / this.columnNumber
+        let row = 0
+        let column = 0
+        
+        if (i % this.columnNumber === 0){
+            row = i / this.columnNumber
+        }else { 
+            row = parseInt(i / this.columnNumber)
+        }
+
+        column = (i % this.columnNumber)
+
+        const xseperator = (this.cardWidth + this.gap) * column
+        const yseperator = (height + this.gap) * row
+
+        const card = this.add.container(this.gap + xseperator, (this.gap + this.header.height) + yseperator).setSize(this.cardWidth, height)
+        const bg = this.add.rectangle(0, 0, this.cardWidth, height, 0x2c3e50).setOrigin(0, 0)
+        const picture = this.add.image((bg.width - 90) / 2, 10, map.picture).setDisplaySize(90, 90).setOrigin(0, 0).setDepth(5)
+        const title = this.add.text(bg.width / 2, picture.y + 90 + 3, map.title).setOrigin(0.5, 0).setDepth(10)
+        const id = this.add.text(0, 0, map.id)
+        const editButton = this.buttonDesign(10, title.y + title.height + 6, bg.width)
         editButton.setInteractive(new Phaser.Geom.Rectangle(25, 10, 50, 20), Phaser.Geom.Rectangle.Contains)
         editButton.on('pointerdown', () => this.onEdit(map.id))
 
         card.add([bg, picture, title, id, editButton])
-        card.setSize(width, height)
         return card
     }
 
-    buttonDesign(x, y){
-        const buttonContainer = this.add.container(x, y + 5)
-        const bg = this.add.rectangle(0, 0, 50, 20, 0x3498db).setOrigin(0, 0)
-        const buttonText = this.add.text(0, 0, 'Edit', {
+    buttonDesign(x, y, width){
+        const btWidht = width - 20
+        const buttonContainer = this.add.container(x, y)
+        const bg = this.add.rectangle(0, 0, btWidht, 20, 0x3498db).setOrigin(0, 0).setRounded(2.5)
+        const buttonText = this.add.text(bg.width / 2, bg.height / 2, 'Edit', {
             fontSize: '16px',
             fill: '#fff',
             fontWeight: 'bold'
-        }).setOrigin(0, 0).setPadding(5, 2, 5, 2);
-        buttonContainer.setSize(50, 20)
+        }).setOrigin(0.5, 0.5).setPadding(5, 2, 5, 2);
+        buttonContainer.setSize(btWidht, 20)
 
         buttonContainer.add([bg, buttonText])
         return buttonContainer
