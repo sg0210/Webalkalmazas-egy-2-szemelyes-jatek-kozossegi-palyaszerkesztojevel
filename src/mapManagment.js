@@ -15,7 +15,7 @@ export class MapManagment extends Phaser.Scene {
         this.load.image("card", "assets/card.png")
         this.load.image("card_plus", "assets/card_plus.png")
         this.load.image("back", "assets/button.png")
-        this.load.image("counter", "assets/text_bg.png")
+        this.load.image("counter", "assets/map_counter_bg.png")
     }
 
     async create(){
@@ -32,9 +32,9 @@ export class MapManagment extends Phaser.Scene {
         const maps = data.maps
 
         const hud = this.add.layer().setDepth(10)
-        this.header = this.add.rectangle(0, 0, this.scale.width, 50, 0x2c3e50).setOrigin(0, 0)
+        this.header = this.add.rectangle(0, 0, this.scale.width, 50, 0x0B1D29).setOrigin(0, 0)
         this.backButton = this.mainButtonDesign(10, (this.header.height - 38) / 2, 100, 38, "Back", "LandScene")
-        this.mapNumber = this.mapCounter(maps.length, 60, 30)
+        this.mapNumber = this.mapCounter(maps.length, 86, 38)
         
         hud.add([this.header, this.backButton, this.mapNumber])
 
