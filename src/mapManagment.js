@@ -5,15 +5,14 @@ import { sizes } from "./gameScene"
 export class MapManagment extends Phaser.Scene {
     constructor(){
          super({key: 'MapManagment'})
-         this.cardHeight = 150
+         this.cardHeight = 180
          this.cardWidth
          this.gap = 15
          this.columnNumber = 3
     }
 
     preload(){
-        
-        
+        this.load.image("card", "assets/card.png")
     }
 
     async create(){
@@ -78,7 +77,8 @@ export class MapManagment extends Phaser.Scene {
             if ((this.cardHeight + this.gap) * Math.ceil(maps.length / this.columnNumber) + this.gap < this.scale.height - 50) return
             this.list.y = Phaser.Math.Clamp(this.list.y - deltaY * 0.3, -minY, 0)
         });
-
+        console.log(parseInt((sizes.screenWidth - ((4 + 1) * this.gap)) / 4))
+        console.log(parseInt((sizes.screenWidth - ((3 + 1) * this.gap)) / 3))
     }    
 
     update(){
