@@ -5,7 +5,7 @@ import { sizes } from "./gameScene"
 export class MapManagment extends Phaser.Scene {
     constructor(){
          super({key: 'MapManagment'})
-         this.cardHeight = 180
+         this.cardHeight = 205
          this.cardWidth
          this.gap = 15
          this.columnNumber = 3
@@ -27,7 +27,6 @@ export class MapManagment extends Phaser.Scene {
         const data = await response.json()
 
         const maps = data.maps
-        console.log(maps)
 
         this.header = this.add.rectangle(0, 0, this.scale.width, 50, 0x2c3e50).setOrigin(0, 0)
         this.header.setDepth(10)
@@ -82,6 +81,7 @@ export class MapManagment extends Phaser.Scene {
     }    
 
     update(){
+        
     }
 
     createCardNew(height){
@@ -104,7 +104,8 @@ export class MapManagment extends Phaser.Scene {
         const title = this.add.text(bg.width / 2, bg.height / 2 + 10, "New Map").setOrigin(0.5, 0.5)
         card.add([bg, plus, title])
         card.setInteractive({useHandCursor: true})
-        .on('pointerdown', () => this.scene.start('MapEditor'))
+        card.on('pointerdown', () => this.scene.start('MapEditor'))
+        this.input.enableDebug(card)
         return card
     }
 
@@ -125,30 +126,31 @@ export class MapManagment extends Phaser.Scene {
         const yseperator = (height + this.gap) * row
 
         const card = this.add.container(this.gap + xseperator, (this.gap + this.header.height) + yseperator).setSize(this.cardWidth, height)
-        const bg = this.add.rectangle(0, 0, this.cardWidth, height, 0x2c3e50).setOrigin(0, 0)
-        const picture = this.add.image((bg.width - 90) / 2, 10, map.picture).setDisplaySize(90, 90).setOrigin(0, 0).setDepth(5)
-        const title = this.add.text(bg.width / 2, picture.y + 90 + 3, map.title).setOrigin(0.5, 0).setDepth(10)
-        const id = this.add.text(0, 0, map.id)
-        const editButton = this.buttonDesign(10, title.y + title.height + 6, bg.width)
-        editButton.setInteractive(new Phaser.Geom.Rectangle(25, 10, 50, 20), Phaser.Geom.Rectangle.Contains)
+        const bg = this.add.image(0, 0, "card", 0).setOrigin(0, 0)
+        const picture = this.add.image((bg.width - 100) / 2, 31, map.picture).setDisplaySize(100, 100).setOrigin(0, 0)
+        const title = this.add.text(bg.width / 2, picture.y + 123, map.title).setOrigin(0.5, 0)
+        const id = this.add.text(21, 25, map.id).setOrigin(0.5, 0.5)
+        const editButton = this.buttonDesign(((bg.width - (bg.width - 40)) / 2), title.y + title.height + 13, bg.width - 40)
+        editButton.on('pointerover', () => {editButton.setScale(0.95)})
+        editButton.on('pointerout', () => {editButton.setScale(1)})
         editButton.on('pointerdown', () => this.onEdit(map.id))
 
-        card.add([bg, picture, title, id, editButton])
+        card.add([picture, bg, title, id, editButton])
         return card
     }
 
-    buttonDesign(x, y, width){
-        const btWidht = width - 20
-        const buttonContainer = this.add.container(x, y)
-        const bg = this.add.rectangle(0, 0, btWidht, 20, 0x3498db).setOrigin(0, 0).setRounded(2.5)
-        const buttonText = this.add.text(bg.width / 2, bg.height / 2, 'Edit', {
+    buttonDesign(x, y, btWidht){
+        const btHeigth = 20
+        const buttonContainer = this.add.container(x + btWidht / 2, y + btHeigth / 2)
+        const bg = this.add.rectangle(0, 0, btWidht, 20, 0x3498db).setRounded(2.5)
+        const buttonText = this.add.text(0, 0, 'Edit', {
             fontSize: '16px',
             fill: '#fff',
             fontWeight: 'bold'
-        }).setOrigin(0.5, 0.5).setPadding(5, 2, 5, 2);
-        buttonContainer.setSize(btWidht, 20)
-
+        }).setOrigin(0.5);
         buttonContainer.add([bg, buttonText])
+        buttonContainer.setSize(btWidht, 20)
+        buttonContainer.setInteractive({useHandCrusor: true})
         return buttonContainer
     }
 
