@@ -13,6 +13,7 @@ export class MapManagment extends Phaser.Scene {
 
     preload(){
         this.load.image("card", "assets/card.png")
+        this.load.image("card_plus", "assets/card_plus.png")
     }
 
     async create(){
@@ -98,14 +99,11 @@ export class MapManagment extends Phaser.Scene {
         const xseperator = (this.cardWidth + this.gap) * column
         const yseperator = (height + this.gap) * row
 
-        const card = this.add.container(this.gap + xseperator, (this.gap + this.header.height) + yseperator).setSize(this.cardWidth, height)
-        const bg = this.add.rectangle(0, 0, this.cardWidth, height, 0x2c3e50).setOrigin(0, 0)
-        const plus = this.add.text(bg.width / 2, bg.height / 2, "+").setOrigin(0.5, 0.5)
-        const title = this.add.text(bg.width / 2, bg.height / 2 + 10, "New Map").setOrigin(0.5, 0.5)
-        card.add([bg, plus, title])
+        const card = this.add.image(this.gap + xseperator + this.cardWidth / 2, (this.gap + this.header.height) + yseperator + height / 2 + 7, "card_plus", 0)
         card.setInteractive({useHandCursor: true})
+        card.on('pointerover', () => {card.setScale(0.95)})
+        card.on('pointerout', () => {card.setScale(1)})
         card.on('pointerdown', () => this.scene.start('MapEditor'))
-        this.input.enableDebug(card)
         return card
     }
 
