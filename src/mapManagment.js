@@ -14,6 +14,7 @@ export class MapManagment extends Phaser.Scene {
     preload(){
         this.load.image("card", "assets/card.png")
         this.load.image("card_plus", "assets/card_plus.png")
+        this.load.image("back", "assets/button.png")
     }
 
     async create(){
@@ -29,22 +30,10 @@ export class MapManagment extends Phaser.Scene {
 
         const maps = data.maps
 
+        const hud = this.add.layer().setDepth(10)
         this.header = this.add.rectangle(0, 0, this.scale.width, 50, 0x2c3e50).setOrigin(0, 0)
-        this.header.setDepth(10)
-
-        const backButton = this.add.text(10, 10, "Back", {
-            fontFamily: 'Arial',
-            fontSize: '20px',
-            color: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 10, y: 5 }
-        })
-
-        backButton.setDepth(11)
-        backButton.setInteractive({useHandCrusor: true})
-        backButton.on('pointerdown', () => {
-            this.scene.switch('LandScene')
-        })
+        this.backButton = this.mainButtonDesign(10, (this.header.height - 38) / 2, 100, 38, "Back", "LandScene")
+        hud.add([this.header, this.backButton])
 
         if (this.list) {
             this.list.destroy()
@@ -166,6 +155,22 @@ export class MapManagment extends Phaser.Scene {
         const mapData = data.maps
 
         this.scene.start('MapEditor', { mapData })
+    }
+
+    mainButtonDesign(x, y, width, heigth, text, scene) {
+        const button = this.add.container(x + width / 2, y + heigth / 2)
+        const bg = this.add.image(0, 0, "back")
+        const label = this.add.text(0, 0, text, {fontFamily: '"Arial Black"', fill: '#f7f4df', fontSize: '14px', stroke: '#14202a',
+        strokeThickness: 5}).setOrigin(0.5).setShadow(2, 3, 'x000000', 0, true, true)
+        button.add([bg, label]).setSize(width, heigth)
+        
+        button.setInteractive({useHandCursor: true})
+
+        button.on('pointerover', () => {button.setScale(0.95)})
+        button.on('pointerout', () => {button.setScale(1)})
+        button.on('pointerdown', () => {this.scene.start(scene)})
+
+        return button
     }
 
 }
