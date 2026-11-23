@@ -4,12 +4,18 @@ import { sizes } from "./gameScene"
 export class MapSelect extends Phaser.Scene {
     constructor(){
          super({key: 'MapSelect'})
-         this.cardHeight = 150
-         this.cardWidth = 100
+         this.cardHeight = 205
          this.gap = 15
+         this.columnNumber = 3
     }
 
     preload(){
+        this.load.image("card", "assets/card.png")
+        this.load.image("card_plus", "assets/card_plus.png")
+        this.load.image("back", "assets/button.png")
+        this.load.image("counter", "assets/map_counter_bg.png")
+        this.load.image("map_bg", "assets/maps_bg.png")
+        this.load.image("map_header", "assets/maps_header.png")
         
     }
 
@@ -23,23 +29,12 @@ export class MapSelect extends Phaser.Scene {
 
         const maps = data.maps
 
-        const header = this.add.rectangle(0, 0, this.scale.width, 50, 0x2c3e50).setOrigin(0, 0)
-        header.setDepth(10)
-
-        const backButton = this.add.text(10, 10, "Back", {
-            fontFamily: 'Arial',
-            fontSize: '20px',
-            color: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 10, y: 5 }
-        })
-
-        backButton.setDepth(11)
-        backButton.setInteractive({useHandCrusor: true})
-        backButton.on('pointerdown', () => {
-            this.scene.switch('LandScene')
-        })
-
+        const hud = this.add.layer().setDepth(10)
+        this.header = this.add.image(0, 0, "map_header").setOrigin(0, 0)
+        this.bg = this.add.image(0, 0, "map_bg").setOrigin(0, 0)
+        this.backButton = this.mainButtonDesign(10, (this.header.height - 38) / 2, 100, 38, "Back", "LandScene")
+        
+        hud.add([this.header, this.backButton])
         if (this.list) {
             this.list.destroy()
         }
@@ -56,15 +51,9 @@ export class MapSelect extends Phaser.Scene {
                 console.log('Loading image:', map.picture)
         })
 
-        maps.forEach((map, i) => {
-            const card = this.createCard(map, i, this.cardWidth, this.cardHeight)
-            this.list.add(card)
-        })
-
-
         this.load.once('complete', () => {
             maps.forEach((map, i) => {
-                const card = this.createCard(map, i, this.cardWidth, this.cardHeight)
+                const card = this.createCard(map, i, this.cardHeight)
                 this.list.add(card)
             })
         })
@@ -79,57 +68,74 @@ export class MapSelect extends Phaser.Scene {
             this.list.y = Phaser.Math.Clamp(this.list.y - deltaY * 0.3, -minY, 0)
         });
 
+        console.log(this.list)
     }    
 
-    update(){
+    update(){}
 
-    }
-
-    createCard(map, i, width, height){
+    createCard(map, i, height){
+        this.cardWidth = (sizes.screenWidth - ((this.columnNumber + 1) * this.gap)) / this.columnNumber
         let row = 0
         let column = 0
-        const gap = 15
         
-        if (i % 4 === 0){
-            row = i / 4
+        if (i % this.columnNumber === 0){
+            row = i / this.columnNumber
         }else { 
-            row = parseInt(i / 4)
+            row = parseInt(i / this.columnNumber)
         }
 
-        column = (i % 4)
+        column = (i % this.columnNumber)
 
-        const xseperator = (width + gap) * column
-        const yseperator = (height + gap) * row
+        const xseperator = (this.cardWidth + this.gap) * column
+        const yseperator = (height + this.gap * 2) * row
 
-        const card = this.add.container(10 + xseperator, 15 + yseperator)
-        const bg = this.add.rectangle(10, 50 , width, height, 0x2c3e50).setOrigin(0, 0).setRounded(3)
-        const picture = this.add.image(15, 55 , map.picture).setDisplaySize(90, 90).setOrigin(0, 0)
-        const title = this.add.text(15, 145 , map.title).setOrigin(0, 0)
-        const id = this.add.text(title.width + 35, 145 , map.id).setOrigin(0, 0)
-        const playButton = this.buttonDesign(15, 155)
-        playButton.setInteractive(new Phaser.Geom.Rectangle(25, 10, 50, 20), Phaser.Geom.Rectangle.Contains)
-        playButton.on('pointerdown', () => this.onPlay(map.map_json))
-        card.add([bg, picture, title, id, playButton])
-        card.setSize(width, height)
+        const card = this.add.container(this.gap + xseperator, (this.gap + this.header.height) + yseperator).setSize(this.cardWidth, height)
+        const bg = this.add.image(0, 0, "card", 0).setOrigin(0, 0)
+        const picture = this.add.image((bg.width - 100) / 2, 31, map.picture).setDisplaySize(100, 100).setOrigin(0, 0)
+        const title = this.add.text(bg.width / 2, picture.y + 123, map.title).setOrigin(0.5, 0)
+        const id = this.add.text(21, 25, map.id).setOrigin(0.5, 0.5)
+        const playButton = this.buttonDesign(((bg.width - (bg.width - 40)) / 2), title.y + title.height + 13, bg.width - 40)
+        playButton.on('pointerover', () => {playButton.setScale(0.95)})
+        playButton.on('pointerout', () => {playButton.setScale(1)})
+        playButton.on('pointerdown', () => this.onPlay(map.mapJson))
+
+        card.add([picture, bg, title, id, playButton])
         return card
     }
 
-    buttonDesign(x, y){
-        const buttonContainer = this.add.container(x, y + 5)
-        const bg = this.add.rectangle(0, 0, 50, 20, 0x3498db).setOrigin(0, 0)
+    buttonDesign(x, y, btWidht){
+        const btHeigth = 20
+        const buttonContainer = this.add.container(x + btWidht / 2, y + btHeigth / 2)
+        const bg = this.add.rectangle(0, 0, btWidht, 20, 0x3498db).setRounded(2.5)
         const buttonText = this.add.text(0, 0, 'Play', {
             fontSize: '16px',
             fill: '#fff',
             fontWeight: 'bold'
-        }).setOrigin(0, 0).setPadding(5, 2, 5, 2);
-        buttonContainer.setSize(50, 20)
-
+        }).setOrigin(0.5);
         buttonContainer.add([bg, buttonText])
+        buttonContainer.setSize(btWidht, 20)
+        buttonContainer.setInteractive({useHandCrusor: true})
         return buttonContainer
     }
 
     async onPlay(mapJson){
         this.scene.start('PlayerSelectScene', {mapData: mapJson})
+    }
+
+    mainButtonDesign(x, y, width, heigth, text, scene) {
+        const button = this.add.container(x + width / 2, y + heigth / 2)
+        const bg = this.add.image(0, 0, "back")
+        const label = this.add.text(0, 0, text, {fontFamily: '"Arial Black"', fill: '#f7f4df', fontSize: '14px', stroke: '#14202a',
+        strokeThickness: 5}).setOrigin(0.5).setShadow(2, 3, 'x000000', 0, true, true)
+        button.add([bg, label]).setSize(width, heigth)
+        
+        button.setInteractive({useHandCursor: true})
+
+        button.on('pointerover', () => {button.setScale(0.95)})
+        button.on('pointerout', () => {button.setScale(1)})
+        button.on('pointerdown', () => {this.scene.start(scene)})
+
+        return button
     }
 
 }

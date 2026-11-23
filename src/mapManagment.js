@@ -16,6 +16,8 @@ export class MapManagment extends Phaser.Scene {
         this.load.image("card_plus", "assets/card_plus.png")
         this.load.image("back", "assets/button.png")
         this.load.image("counter", "assets/map_counter_bg.png")
+        this.load.image("map_bg", "assets/maps_bg.png")
+        this.load.image("map_header", "assets/maps_header.png")
     }
 
     async create(){
@@ -32,7 +34,8 @@ export class MapManagment extends Phaser.Scene {
         const maps = data.maps
 
         const hud = this.add.layer().setDepth(10)
-        this.header = this.add.rectangle(0, 0, this.scale.width, 50, 0x0B1D29).setOrigin(0, 0)
+        this.header = this.add.image(0, 0, "map_header").setOrigin(0, 0)
+        this.bg = this.add.image(0, 0, "map_bg").setOrigin(0, 0)
         this.backButton = this.mainButtonDesign(10, (this.header.height - 38) / 2, 100, 38, "Back", "LandScene")
         this.mapNumber = this.mapCounter(maps.length, 86, 38)
         
@@ -54,23 +57,24 @@ export class MapManagment extends Phaser.Scene {
                 console.log('Loading image:', map.picture)
         })
 
-        maps.forEach((map, i) => {
-            const card = this.createCard(map, i, this.cardHeight)
-            this.list.add(card)
+        this.load.once('complete', () => {
+            maps.forEach((map, i) => {
+                const card = this.createCard(map, i, this.cardHeight)
+                this.list.add(card)
+            })
+            const newCard = this.createCardNew(this.cardHeight)
+            this.list.add(newCard)
         })
 
-        const newCard = this.createCardNew(this.cardHeight)
-        this.list.add(newCard)
+        this.load.start()
 
         //scrolling
         
         this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
-            const minY = ((this.cardHeight + this.gap) * Math.ceil(maps.length / this.columnNumber) + this.gap - this.scale.height + 50)
-            if ((this.cardHeight + this.gap) * Math.ceil(maps.length / this.columnNumber) + this.gap < this.scale.height - 50) return
+            const minY = ((this.cardHeight + this.gap * 2) * Math.ceil(maps.length / this.columnNumber) + this.gap - this.scale.height + 50)
+            if ((this.cardHeight + this.gap * 2) * Math.ceil(maps.length / this.columnNumber) + this.gap < this.scale.height - 50) return
             this.list.y = Phaser.Math.Clamp(this.list.y - deltaY * 0.3, -minY, 0)
         });
-        console.log(parseInt((sizes.screenWidth - ((4 + 1) * this.gap)) / 4))
-        console.log(parseInt((sizes.screenWidth - ((3 + 1) * this.gap)) / 3))
     }    
 
     update(){
@@ -89,7 +93,7 @@ export class MapManagment extends Phaser.Scene {
         }
 
         const xseperator = (this.cardWidth + this.gap) * column
-        const yseperator = (height + this.gap) * row
+        const yseperator = (height + this.gap * 2) * row
 
         const card = this.add.image(this.gap + xseperator + this.cardWidth / 2, (this.gap + this.header.height) + yseperator + height / 2 + 7, "card_plus", 0)
         card.setInteractive({useHandCursor: true})
@@ -113,7 +117,7 @@ export class MapManagment extends Phaser.Scene {
         column = (i % this.columnNumber)
 
         const xseperator = (this.cardWidth + this.gap) * column
-        const yseperator = (height + this.gap) * row
+        const yseperator = (height + this.gap * 2) * row
 
         const card = this.add.container(this.gap + xseperator, (this.gap + this.header.height) + yseperator).setSize(this.cardWidth, height)
         const bg = this.add.image(0, 0, "card", 0).setOrigin(0, 0)

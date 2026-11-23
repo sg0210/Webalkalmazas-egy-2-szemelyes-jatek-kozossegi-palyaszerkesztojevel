@@ -7,33 +7,61 @@ export class MenuScene extends Phaser.Scene {
         super({key: 'MenuScene'})
     }
 
+    init(data){
+        this.mapData = data.mapData
+    }
+
     preload() {
+        this.load.image("button_bg", "assets/button.png")
+        this.load.image("menu_bg", "assets/map_counter_bg.png")
         
     }
 
     create() {
         const previousScene = this.registry.get('previousScene')
-        this.menuBG = this.add.rectangle(sizes.screenWidth/2, sizes.screenHeight/2, 250, 200, 0x30303b, 1)
-        this.buttonExit = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 + 60, 'Exit',previousScene, false, false, 'LandScene')
-        this.registry.get('previousScene') === 'GameScene' ? this.buttonRestart = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2, 'Restart', false, 'GameScene', false, false) : false
-        this.buttonResume = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 - (this.registry.get('previousScene') === 'GameScene' ? 60 : 0), 'Resume', 'MenuScene', false, previousScene, false)
+        const w = 220, h = 190, butH = 50, defaultY = -(h / 2) + butH / 2
+        
+        this.menu = this.add.container(sizes.screenWidth/2, sizes.screenHeight/2)
+
+        this.menuBG = this.add.nineslice(0, 0, "menu_bg", null, 220, 220, 13, 13, 13, 13)
+        this.buttonResume = this.navigateButton(0, defaultY + 10, butH, 'Resume', 'MenuScene', false, previousScene, false)
+        this.buttonExit = this.navigateButton(0, defaultY + h - butH - 10, butH, 'Exit', previousScene, 'LandScene', false, false)
+        this.menu.setSize(this.menuBG.width, this.menuBG.height)
+        this.menu.add([this.menuBG, this.buttonResume, this.buttonExit])
+        
+    
+         if (this.registry.get('previousScene') === 'GameScene'){
+            this.buttonRestart = this.navigateButton(0, this.buttonResume.y + this.buttonResume.height + 10, butH, 'Restart', false, 'GameScene', false, false)
+            this.menu.add([this.buttonRestart])
+        }
+        if (this.registry.get('previousScene') === 'MapEditor'){
+            this.buttonTest = this.navigateButton(0, this.buttonResume.y + this.buttonResume.height + 10, butH, 'Test', 'MapEditor', 'GameScene', false, false)
+            this.menu.add([this.buttonTest])
+        }
+        console.log(this.registry.get('previousScene'))
     }
 
     update() {
     }
 
-    navigateButton(x, y, text, stopScene, startScene, resumeScene, switchScene) {
-        const bg = this.add.rectangle(0, 0, 200, 50, 0x929191, 1)
-        const label = this.add.text(0, 0, text, {fill: '#0f0', fontSize: '24px'}).setOrigin(0.5)
-        const button = this.add.container(x, y, [bg, label])
+    navigateButton(x, y, height, text, stopScene, startScene, resumeScene, switchScene) {
+        const bg = this.add.nineslice(0, 0, "button_bg", null, 180, height, 13, 13, 13, 13)
+        const label = this.add.text(0, 0, text, {fontFamily: '"Arial Black"', fill: '#f7f4df', fontSize: '20px', stroke: '#14202a',
+        strokeThickness: 5}).setOrigin(0.5)
+        const button = this.add.container(x, y, [bg, label]).setSize(bg.width, bg.height)
         
-        button.setInteractive(new Phaser.Geom.Rectangle(-100, -25, 200, 50), Phaser.Geom.Rectangle.Contains)
+        button.setInteractive(new Phaser.Geom.Rectangle(0, 0, 180, height), Phaser.Geom.Rectangle.Contains)
 
         button.on('pointerover', () => {button.setScale(0.95)})
         button.on('pointerout', () => {button.setScale(1)})
         button.on('pointerdown', () => {if (stopScene != false){this.scene.stop(stopScene)}
                                         if (startScene != false){this.scene.start(startScene)}
+                                        else if (switchScene === 'MapEditor'){this.scene.start(switchScene, this.mapData, numberOfPlayers = 1)}
                                         if (resumeScene != false){this.scene.run(resumeScene)}
                                         if (switchScene != false) {this.scene.start(switchScene)}})
+
+        return button
     }
+
+    
 }

@@ -150,7 +150,6 @@ export class MapEditor extends Phaser.Scene {
         const pointer = this.input.activePointer
 
         if (Phaser.Input.Keyboard.JustDown(this.keyV)){
-            console.log(this.mapData)
         }
 
         //console.log(calculateCordinateX(pointer.x),calculateCordinateSmallerY(pointer.y))
@@ -193,7 +192,7 @@ export class MapEditor extends Phaser.Scene {
 
         if (Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
             this.scene.pause('MapEditor')
-            this.scene.launch('MenuScene')
+            this.scene.launch('MenuScene', this.data.mapData)
             this.registry.set('previousScene', 'MapEditor')
         }
     }

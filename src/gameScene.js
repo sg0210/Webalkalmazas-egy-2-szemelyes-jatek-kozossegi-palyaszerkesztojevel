@@ -98,6 +98,7 @@ function setLimits(a){
         ]
       }else{
         this.mapData = JSON.parse(data.mapData)
+        this.oldMapData = data.mapData
       }
   }
 
@@ -141,8 +142,15 @@ function setLimits(a){
       frameWidth: sizes.tileSize,
       frameHeight: sizes.tileSize
     })
+
+    this.load.image("header_bg", "assets/button.png")
+    this.load.image("game_bg", "assets/maps_bg.png")
   }
   create() {
+    
+    const bg = this.add.image(0, 0, "game_bg").setOrigin(0, 0)
+    const headerBG = this.add.nineslice(0, 0, "header_bg", null, sizes.screenWidth, sizes.hudHeight, 13, 13, 13, 13).setOrigin(0, 0)
+    
 
     // Tile empty map
     const map = this.make.tilemap({
@@ -268,20 +276,20 @@ function setLimits(a){
     //HUD létrehozása
     this.players.first.HUD = {hpHUD: this.createPlayerHUD(), bombHUD: this.createPlayerHUD()}
     for (let i = 0; i < this.players.first.hp; i++) {
-         this.players.first.HUD.hpHUD.fill.create(0 + (5 + i * (sizes.tileSize / 1.5 + 2)), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
+         this.players.first.HUD.hpHUD.fill.create(10 + (5 + i * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'hp', 0).setOrigin(0, 0.5).setScale(0.75)
     }
     for (let i = 0; i < this.players.first.bombs; i++) {
-        this.players.first.HUD.bombHUD.fill.create(0 + (5 + i * (sizes.tileSize / 1.5 + 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+        this.players.first.HUD.bombHUD.fill.create(10 + (5 + (i + this.players.first.hp) * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'bomb_hp', 0).setOrigin(0, 0.5).setScale(0.75)
     }
 
     if (this.numberOfPlayers === 2) {
       this.players.second.HUD = {hpHUD: this.createPlayerHUD(),
                                  bombHUD: this.createPlayerHUD()}
       for (let i = 0; i < this.players.second.hp; i++) {
-         this.players.second.HUD.hpHUD.fill.create(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
+         this.players.second.HUD.hpHUD.fill.create(sizes.screenWidth - (15 + (i + 1) * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'hp', 0).setOrigin(0, 0.5).setScale(0.75)
       }
       for (let i = 0; i < this.players.second.bombs; i++) {
-        this.players.second.HUD.bombHUD.fill.create(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+        this.players.second.HUD.bombHUD.fill.create(sizes.screenWidth - (15 + (i + 1 + this.players.second.hp) * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'bomb_hp', 0).setOrigin(0, 0.5).setScale(0.75)
       }
     }
     else {
@@ -323,12 +331,19 @@ function setLimits(a){
     this.nextThinkTime = 0    
   }
   update(time, delta) {
-    console.log(this.numberOfPlayers, this.players.first.hp)
 
-    if (this.players.first.hp === 0 || (this.numberOfPlayers === 1 ? this.players.ai.hp === 0 : this.players.second.hp === 0))
+    if (this.numberOfPlayers === 1)
     {
-      console.log("Gameover")
-      this.gameOver()
+      if (this.players.first.hp === 0 || this.players.ai.hp === 0){
+        console.log("Gameover")
+        this.gameOver()
+      }
+    }
+    else if (this.numberOfPlayers === 2){
+      if (this.players.first.hp === 0 || this.players.second.hp === 0){
+        console.log("Gameover")
+        this.gameOver()
+      }
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyV)){
@@ -404,7 +419,7 @@ function setLimits(a){
 
     if (this.keyEsc.isDown) {
           this.scene.pause('GameScene')  
-          this.scene.launch('MenuScene')
+          this.scene.launch('MenuScene', this.oldMapData)
           this.registry.set('previousScene', 'GameScene')
     }
 
