@@ -145,6 +145,8 @@ function setLimits(a){
 
     this.load.image("header_bg", "assets/button.png")
     this.load.image("game_bg", "assets/maps_bg.png")
+    this.load.image("red_head", "assets/red_head.png")
+    this.load.image("orange_head", "assets/orange_head.png")
   }
   create() {
     
@@ -275,11 +277,12 @@ function setLimits(a){
 
     //HUD létrehozása
     this.players.first.HUD = {hpHUD: this.createPlayerHUD(), bombHUD: this.createPlayerHUD()}
+    const player_first_head = this.add.image(10, sizes.hudHeight/2, 'red_head', null).setOrigin(0).setSize(sizes.tileSize, sizes.tileSize).setSca0(0.75)
     for (let i = 0; i < this.players.first.hp; i++) {
-         this.players.first.HUD.hpHUD.fill.create(10 + (5 + i * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'hp', 0).setOrigin(0, 0.5).setScale(0.75)
+         this.players.first.HUD.hpHUD.fill.create(player_first_head.width + 10 + (5 + i * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'hp', 0).setOrigin(0, 0.5).setScale(0.75)
     }
     for (let i = 0; i < this.players.first.bombs; i++) {
-        this.players.first.HUD.bombHUD.fill.create(10 + (5 + (i + this.players.first.hp) * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'bomb_hp', 0).setOrigin(0, 0.5).setScale(0.75)
+        this.players.first.HUD.bombHUD.fill.create(player_first_head.width + 10 + (5 + (i + this.players.first.hp) * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'bomb_hp', 0).setOrigin(0, 0.5).setScale(0.75)
     }
 
     if (this.numberOfPlayers === 2) {
