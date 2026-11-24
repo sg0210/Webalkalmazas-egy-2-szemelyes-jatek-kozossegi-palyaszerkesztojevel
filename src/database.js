@@ -33,6 +33,28 @@ app.use(cors())
             FOREIGN KEY (user_id) REFERENCES users(id)
         )`)
 
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS ratings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            map_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+            UNIQUE (map_id, user_id),
+            FOREIGN KEY (map_id) REFERENCES maps(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )`)
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS wins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            map_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            winner TEXT NOT NULL,
+            date DATE NOT NULL,
+            FOREIGN KEY (map_id) REFERENCES maps(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )`)
+
 app.post('/users', (req, res) => {
     const { browser_id } = req.body
 
@@ -104,6 +126,8 @@ app.delete("/maps/:id", async (req, res) => {
     const id = req.params.id
 
     try {
+        db.prepare(`DELETE FROM ratings WHERE map_id = ?`).run(id)
+        db.prepare(`DELETE FROM wins WHERE map_id = ?`).run(id)
         const result = db.prepare(`DELETE FROM maps WHERE id = ?`).run(id)
         if (result.changes === 0) {
             return res.status(404).json({error: 'Map not found'})
@@ -155,6 +179,78 @@ app.post('/map/get', (req, res) => {
         res.status(500).json({error: err.message})
     }
     
+})
+
+
+app.post('/maps/:id/rating', (req, res) => {
+    const { browser_id } = req.body
+    const mapId = Number(req.params.id)
+
+    try {
+        const stats = db.prepare(`SELECT AVG(rating) AS average, COUNT(*) AS count FROM ratings WHERE map_id = ?`).get(mapId)
+        const user = db.prepare(`SELECT id FROM users WHERE browser_id = ?`).get(browser_id)
+        const own = user ? db.prepare(`SELECT rating FROM ratings WHERE map_id = ? AND user_id = ?`).get(mapId, user.id) : null
+
+        res.json({success: true, average: stats.average || 0, count: stats.count, myRating: own ? own.rating : null})
+    } catch (err) {
+        res.status(500).json({error: err.message})
+    }
+})
+
+
+app.post('/maps/:id/rate', (req, res) => {
+    const { browser_id, rating } = req.body
+    const mapId = Number(req.params.id)
+    const value = Number(rating)
+
+    if (!Number.isInteger(value) || value < 1 || value > 5) {
+        return res.status(400).json({error: 'Rating must be between 1 and 5'})
+    }
+
+    try {
+        db.prepare(`INSERT OR IGNORE INTO users (browser_id) VALUES (?)`).run(browser_id)
+        const user = db.prepare(`SELECT id FROM users WHERE browser_id = ?`).get(browser_id)
+
+        const result = db.prepare(`INSERT OR IGNORE INTO ratings (map_id, user_id, rating) VALUES (?, ?, ?)`).run(mapId, user.id, value)
+        if (result.changes === 0) {
+            return res.status(409).json({error: 'Already rated'})
+        }
+
+        const stats = db.prepare(`SELECT AVG(rating) AS average, COUNT(*) AS count FROM ratings WHERE map_id = ?`).get(mapId)
+        res.json({success: true, average: stats.average, count: stats.count, myRating: value})
+    } catch (err) {
+        res.status(500).json({error: err.message})
+    }
+})
+
+app.post('/maps/:id/win', (req, res) => {
+    const { browser_id, winner } = req.body
+    const mapId = Number(req.params.id)
+
+    if (!winner) {
+        return res.status(400).json({error: 'Winner is required'})
+    }
+
+    try {
+        db.prepare(`INSERT OR IGNORE INTO users (browser_id) VALUES (?)`).run(browser_id)
+        const user = db.prepare(`SELECT id FROM users WHERE browser_id = ?`).get(browser_id)
+
+        db.prepare(`INSERT INTO wins (map_id, user_id, winner, date) VALUES (?, ?, ?, ?)`).run(mapId, user.id, String(winner), new Date().toISOString())
+        res.json({success: true})
+    } catch (err) {
+        res.status(500).json({error: err.message})
+    }
+})
+
+app.get('/maps/:id/leaderboard', (req, res) => {
+    const mapId = Number(req.params.id)
+
+    try {
+        const rows = db.prepare(`SELECT winner, COUNT(*) AS wins FROM wins WHERE map_id = ? GROUP BY winner ORDER BY wins DESC LIMIT 5`).all(mapId)
+        res.json({success: true, leaderboard: rows})
+    } catch (err) {
+        res.status(500).json({error: err.message})
+    }
 })
 
 

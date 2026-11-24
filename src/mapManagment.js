@@ -1,3 +1,4 @@
+import { getBrowserId, API_URL } from "./browserId"
 import Phaser from "phaser"
 import { LandScene } from "./landScene"
 import { sizes } from "./gameScene"
@@ -22,8 +23,8 @@ export class MapManagment extends Phaser.Scene {
 
     async create(){
 
-        const browser_id = localStorage.getItem('browser_id')
-        const response = await fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/get', {
+        const browser_id = getBrowserId()
+        const response = await fetch(`${API_URL}/maps/get`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ browser_id: browser_id})
@@ -99,7 +100,7 @@ export class MapManagment extends Phaser.Scene {
         card.setInteractive({useHandCursor: true})
         card.on('pointerover', () => {card.setScale(0.95)})
         card.on('pointerout', () => {card.setScale(1)})
-        card.on('pointerdown', () => this.scene.start('MapEditor'))
+        card.on('pointerdown', () => this.scene.start('MapEditor', { mapData: null }))
         return card
     }
 
@@ -150,7 +151,7 @@ export class MapManagment extends Phaser.Scene {
 
     async onEdit(mapID){
 
-        const response = await fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/map/get', {
+        const response = await fetch(`${API_URL}/map/get`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ map_id: mapID})

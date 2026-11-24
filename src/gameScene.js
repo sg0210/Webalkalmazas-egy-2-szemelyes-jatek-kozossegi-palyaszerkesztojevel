@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { getBrowserId, API_URL } from "./browserId";
 
 export const sizes = {
         screenWidth:512,
@@ -58,6 +59,9 @@ function setLimits(a){
   
   init (data) {
     this.numberOfPlayers = data.numberOfPlayers
+    this.editorTest = data.editorTest || null
+    this.mapId = data.mapId ?? null
+    this.isGameOver = false
     if (this.numberOfPlayers === 2) {
       this.players = {
         first: this.createPlayer(1),
@@ -276,33 +280,12 @@ function setLimits(a){
     //this.scoreText = this.add.text(10, sizes.hudHeight + 10, "cordinate x: 0 y: 0", { font: "16px Arial", fill: "#ffffff" })
 
     //HUD létrehozása
-    this.players.first.HUD = {hpHUD: this.createPlayerHUD(), bombHUD: this.createPlayerHUD()}
-    const player_first_head = this.add.image(10, sizes.hudHeight/2, 'red_head', null).setOrigin(0).setSize(sizes.tileSize, sizes.tileSize).setSca0(0.75)
-    for (let i = 0; i < this.players.first.hp; i++) {
-         this.players.first.HUD.hpHUD.fill.create(player_first_head.width + 10 + (5 + i * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'hp', 0).setOrigin(0, 0.5).setScale(0.75)
-    }
-    for (let i = 0; i < this.players.first.bombs; i++) {
-        this.players.first.HUD.bombHUD.fill.create(player_first_head.width + 10 + (5 + (i + this.players.first.hp) * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'bomb_hp', 0).setOrigin(0, 0.5).setScale(0.75)
-    }
-
+    this.buildPlayerHUD(this.players.first, 'red_head', "P1", 'left')
     if (this.numberOfPlayers === 2) {
-      this.players.second.HUD = {hpHUD: this.createPlayerHUD(),
-                                 bombHUD: this.createPlayerHUD()}
-      for (let i = 0; i < this.players.second.hp; i++) {
-         this.players.second.HUD.hpHUD.fill.create(sizes.screenWidth - (15 + (i + 1) * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'hp', 0).setOrigin(0, 0.5).setScale(0.75)
-      }
-      for (let i = 0; i < this.players.second.bombs; i++) {
-        this.players.second.HUD.bombHUD.fill.create(sizes.screenWidth - (15 + (i + 1 + this.players.second.hp) * (sizes.tileSize / 1.5 + 2)), sizes.hudHeight / 2, 'bomb_hp', 0).setOrigin(0, 0.5).setScale(0.75)
-      }
+      this.buildPlayerHUD(this.players.second, 'orange_head', "P2", 'right')
     }
     else {
-      this.players.ai.HUD = {hpHUD: this.createPlayerHUD(), bombHUD: this.createPlayerHUD()}
-      for (let i = 0; i < this.players.ai.hp; i++) {
-         this.players.ai.HUD.hpHUD.fill.create(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5, 'hp', 0).setOrigin(0, 0).setScale(0.75)
-      }
-      for (let i = 0; i < this.players.ai.bombs; i++) {
-        this.players.ai.HUD.bombHUD.fill.create(sizes.screenWidth - (5 + (i + 1) * (sizes.tileSize / 1.5 + 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
-      }
+      this.buildPlayerHUD(this.players.ai, 'orange_head', "AI", 'right')
     }
 
     //Players karakter létrehozása
@@ -313,6 +296,11 @@ function setLimits(a){
     else{
       this.createCharacter(this.players.ai, playerSecondStartX, playerSecondStartY, blocklayer)
     }
+
+    const opponent = this.numberOfPlayers === 2 ? this.players.second : this.players.ai
+    this.players.first.skin.setPushable(false)
+    opponent.skin.setPushable(false)
+    this.physics.add.collider(this.players.first.skin, opponent.skin)
 
     //Játékosok irányítása billentyűkkel
     this.players.first.keys = {
@@ -331,7 +319,8 @@ function setLimits(a){
     
     this.powerUps = this.physics.add.group()
     
-    this.nextThinkTime = 0    
+    this.aiThinkDelay = 1000
+    this.nextThinkTime = this.time.now + 3000
   }
   update(time, delta) {
 
@@ -350,6 +339,8 @@ function setLimits(a){
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyV)){
+      this.powerUpPutRandomly(this.players.ai, this.players.first)
+      this.scene.pause('GameScene')
     }
 
   
@@ -358,15 +349,15 @@ function setLimits(a){
     
     this.numberOfPlayers === 2 ? this.characterControl(this.players.second, this.players.first) : false
     
-    if (this.numberOfPlayers != 2 && !this.players.ai.move.isMoving) {setTimeout(() => {
+    if (this.numberOfPlayers != 2 && !this.players.ai.move.isMoving) {
       if (time >= this.nextThinkTime){
         const result = this.possibleMovementTile(this.players.ai)
         this.players.ai.move.target = result.tile
         this.players.ai.move.isMoving = result.canMove
-        this.nextThinkTime = time + 1000
+        this.nextThinkTime = time + this.aiThinkDelay
       }
-    }, 3000)}
-    else if (this.numberOfPlayers != 2 && (!this.players.ai.blast || this.players.ai.blast != null)) {
+    }
+    else if (this.numberOfPlayers != 2 && this.players.ai.move.target) {
       this.aiMovement(this.players.ai)
     }
 
@@ -406,10 +397,14 @@ function setLimits(a){
     //Powerup random lerakása a játékos körül, ha elfogy a bombák száma
     /*if (this.players.first.bombs === 0 && this.players.first.bombEmpty === false){
       this.players.first.bombEmpty = this.powerUpPutRandomly(this.players.first)
-    }*/
+    }
 
-    /*if (this.numberOfPlayers === 2 && this.players.second.bombs === 0 && this.players.first.bombEmpty === false){
+    if (this.numberOfPlayers === 2 && this.players.second.bombs === 0 && this.players.second.bombEmpty === false){
       this.players.second.bombEmpty = this.powerUpPutRandomly(this.players.second)
+    }
+
+    if (this.numberOfPlayers != 2 && this.players.ai.bombs === 0 && this.players.ai.bombEmpty === false){
+      this.players.ai.bombEmpty = this.powerUpPutRandomly(this.players.ai)
     }*/
 
     if (this.players.first.bombEmpty === true && this.players.first.bombs > 0) {
@@ -453,24 +448,24 @@ function setLimits(a){
     const py = calculateCordinateY(player.skin.y)
     let right = true, left = true, up = true, down = true
    
-    for (let i = 1; i <= this.explosionSize; i++){
+    for (let i = 1; i <= this.explosionSize - 1; i++){
 
-      if (right === true && this.mapData[py][px + i] != 1){
+      if (right === true && this.tileAt(px + i, py) != 1){
         possibleTiles.push({x: px + i, y: py })
       }
       else{right = false}
 
-      if (left === true && this.mapData[py][px - i] != 1){
+      if (left === true && this.tileAt(px - i, py) != 1){
         possibleTiles.push({x: px - i, y: py })
       }
       else{left = false}
 
-      if (up === true && this.mapData[py + i][px] != 1){
+      if (up === true && this.tileAt(px, py + i) != 1){
         possibleTiles.push({x: px, y: py + i})
       }
       else{up = false}
 
-      if (down === true && this.mapData[py - i][px] != 1){
+      if (down === true && this.tileAt(px, py - i) != 1){
         possibleTiles.push({x: px, y: py - i})
       }
       else{down = false}
@@ -498,7 +493,7 @@ function setLimits(a){
       const newx = calculateCordinateX(player.skin.x) + dir.x
       const newy = calculateCordinateY(player.skin.y) + dir.y
 
-      if (this.mapData[newy][newx] === 2){
+      if (this.tileAt(newx, newy) === 2){
         destroyableBlocks++
       }
     }
@@ -510,7 +505,18 @@ function setLimits(a){
 
   }
 
+  tileAt(x, y){
+    if (!this.mapData[y] || this.mapData[y][x] === undefined) {
+      return 1
+    }
+    return this.mapData[y][x]
+  }
+
   aiMovement(player){
+    if (!player.move.target) {
+      player.move.isMoving = false
+      return
+    }
     const tx = calculateCordinateXpx(player.move.target.x)
     const ty = calculateCordinateYpx(player.move.target.y)
     const dx = tx - player.skin.x
@@ -522,7 +528,7 @@ function setLimits(a){
     if (Math.abs(dx) <= tolarenc && Math.abs(dy) <= tolarenc) {
       player.skin.setVelocityX(0)
       player.skin.setVelocityY(0)
-      player.skin.setPosition(tx, ty)
+      player.skin.body.reset(tx, ty)
       player.move.isMoving = false
       return
     }
@@ -548,13 +554,17 @@ function setLimits(a){
       const newx = calculateCordinateX(player.skin.x) + dir.x
       const newy = calculateCordinateY(player.skin.y) + dir.y
 
-      if (this.mapData[newy][newx] === 0) {
+      if (this.tileAt(newx, newy) === 0) {
         walkableTile.push({x: newx, y: newy, score: this.scoreTile(newx, newy)})
       }
     }
 
     walkableTile.sort((a, b) => b.score - a.score)
     this.players.ai.lastVisited = { x: calculateCordinateX(player.skin.x), y: calculateCordinateY(player.skin.y)}
+    if (walkableTile.length === 0) {
+      return {tile: undefined, canMove: false}
+    }
+    console.log(calculateCordinateX(player.skin.x) + "|" + calculateCordinateY(player.skin.y), walkableTile[0], walkableTile)
     return {tile: walkableTile[0], canMove: true}
   }
 
@@ -563,21 +573,43 @@ function setLimits(a){
     
     this.players.first.bomb ? score += this.bombCheck(this.players.first.bomb, x, y) : false
     this.players.ai.bomb ?score += this.bombCheck(this.players.ai.bomb, x, y) : false
-
+    
     if (this.players.first.bomb) {score -= this.explosionCheck(this.players.first.bomb, x, y)}
     if (this.players.ai.bomb) { score -= this.explosionCheck(this.players.ai.bomb, x, y)}
 
-    if (x == this.players.ai.lastVisited.x && y == this.players.ai.lastVisited.y){
+    if(this.explosion.getChildren().length > 0) {score -= this.blastCheck(x, y)}
+
+    if (x == this.players.ai.lastVisited.x && y == this.players.ai.lastVisited.y && calculateCordinateX(this.players.ai.skin.x) != this.players.ai.lastVisited.x && calculateCordinateY(this.players.ai.skin.y) != this.players.ai.lastVisited.y){
         score -= 1
     }
 
-    score -= this.enemyDistance(x, y, this.players.first)
+    if ((!this.players.first.bomb && !this.players.ai.bomb) || this.explosion.getChildren().length == 0){
+      score -= this.avoidStay(x, y, this.players.ai.skin)
+    }
+
+    if (this.blastRange(this.players.ai)){
+      score -= this.enemyDistance(x, y, this.players.first)
+    }
 
     this.players.ai.bombs < 3 ? score += this.powerupCheck(x, y) : false
 
     this.players.first.bomb || this.players.ai.bomb ? score -= this.deadendCheck(x, y) : false 
 
     return score
+  }
+
+  avoidStay(x, y, player){
+    const px = calculateCordinateX(player.x)
+    const py = calculateCordinateY(player.y)
+
+    if (x == px && y == py){
+      return 2
+    }
+    else{
+      return 0
+    }
+
+
   }
 
   enemyDistance(x, y, enemy){
@@ -598,7 +630,7 @@ function setLimits(a){
       const newx = x + dir.x
       const newy = y + dir.y
 
-      if (this.mapData[newy][newx] != 0){
+      if (this.tileAt(newx, newy) != 0){
         deadendscore += 10
       }
     }
@@ -645,19 +677,19 @@ function setLimits(a){
     let right = 0, left = 0, up = 0, down = 0
 
     for (let i = 1; i <= this.explosionSize; i++) {
-      if (right === 0 && this.mapData[bomby][bombx + i] != 1){
+      if (right === 0 && this.tileAt(bombx + i, bomby) != 1){
         explosionTiles.push({x: bombx + i, y: bomby})
       }else {right = 1}
 
-      if (left === 0 && this.mapData[bomby][bombx - i] != 1){
+      if (left === 0 && this.tileAt(bombx - i, bomby) != 1){
         explosionTiles.push({x: bombx - i, y: bomby})
       }else {left = 1}
 
-      if (down === 0 && this.mapData[bomby + i][bombx] != 1){
+      if (down === 0 && this.tileAt(bombx, bomby + i) != 1){
         explosionTiles.push({x: bombx, y: bomby + i})
       }else {down = 1}
 
-      if (up === 0 && this.mapData[bomby - i][bombx] != 1){
+      if (up === 0 && this.tileAt(bombx, bomby - i) != 1){
         explosionTiles.push({x: bombx, y: bomby - i})
       }else {up = 1}
     }
@@ -669,6 +701,18 @@ function setLimits(a){
       }
     }
     return explosionScore
+  }
+
+  blastCheck(x, y){
+    let blastScore = 0
+    this.explosion.getChildren().forEach(explosion => {
+      if (calculateCordinateX(explosion.x) == x && calculateCordinateY(explosion.y) == y){
+        blastScore = 100
+      }
+    })
+
+    console.log(blastScore)
+    return blastScore
   }
 
   characterControl(player, enemy){
@@ -729,44 +773,87 @@ function setLimits(a){
       empty: this.add.group()
     }
   }
-  
+
+  //HUD felépítése: fej, név, életek és bombák. A jobb oldali HUD tükrözve, jobbról balra épül.
+  buildPlayerHUD(player, headKey, label, side) {
+    const right = side === 'right'
+    const centerY = sizes.hudHeight / 2
+    let head
+    if (side === 'right'){
+      head = this.add.image(right ? sizes.screenWidth - 10 : 10, centerY, headKey, null).setOrigin(right ? 1 : 0, 0.5).setFlipX(true)
+    }
+    else{
+      head = this.add.image(right ? sizes.screenWidth - 10 : 10, centerY, headKey, null).setOrigin(right ? 1 : 0, 0.5)
+    }
+    const name = this.add.text(right ? head.x - head.width - 5 : head.x + head.width + 5, centerY, label).setOrigin(right ? 1 : 0, 0.5)
+    const startX = right ? name.x - name.width : name.x + name.width
+
+    player.HUD = {
+      hpHUD: this.createPlayerHUD(),
+      bombHUD: this.createPlayerHUD(),
+      originX: right ? 1 : 0,
+      direction: right ? -1 : 1,
+      step: sizes.tileSize / 1.5 + 2,
+      hpY: centerY - 7.5,
+      bombY: centerY + 9.5
+    }
+    for (let i = 0; i < player.hp; i++) {
+      this.addHudIcon(player, player.HUD.hpHUD.fill, startX + player.HUD.direction * i * player.HUD.step, player.HUD.hpY, 'hp', 0)
+    }
+    for (let i = 0; i < player.bombs; i++) {
+      this.addHudIcon(player, player.HUD.bombHUD.fill, startX + player.HUD.direction * i * player.HUD.step, player.HUD.bombY, 'bomb_hp', 0)
+    }
+  }
+
+  addHudIcon(player, group, x, y, key, frame) {
+    return group.create(x, y, key, frame).setOrigin(player.HUD.originX, 0.5).setScale(0.60)
+  }
+
+  nextBombHudX(player) {
+    return player.HUD.bombHUD.fill.getChildren().slice(-1)[0].x + player.HUD.direction * player.HUD.step
+  }
+
   playerExplsoionHit(player) {
       player.hp -= 1
-      player.HUD.hpHUD.empty.create(player.HUD.hpHUD.fill.getChildren().slice(-1)[0].x, player.HUD.hpHUD.fill.getChildren().slice(-1)[0].y, 'hp', 1).setOrigin(0, 0).setScale(0.75)
+      const lastHp = player.HUD.hpHUD.fill.getChildren().slice(-1)[0]
+      this.addHudIcon(player, player.HUD.hpHUD.empty, lastHp.x, lastHp.y, 'hp', 1)
       player.HUD.hpHUD.fill.getChildren().slice(-1)[0].destroy()
       return true
   }
     
   gameOver(){
+    if (this.isGameOver) return
+    this.isGameOver = true
+    this.saveWin()
     this.scene.pause('GameScene')
     this.scene.launch('GameOverScene')
   }
 
+  //Győztes mentése a pálya ranglistájához (csak közösségi pályán, teszt játéknál nem)
+  saveWin(){
+    if (this.mapId === null || this.editorTest) return
+    const opponent = this.numberOfPlayers === 2 ? this.players.second : this.players.ai
+    const firstDead = this.players.first.hp <= 0
+    const opponentDead = opponent.hp <= 0
+    if (firstDead === opponentDead) return //döntetlen
+
+    const winner = !firstDead ? 'Player 1' : (this.numberOfPlayers === 2 ? 'Player 2' : 'AI')
+    fetch(`${API_URL}/maps/${this.mapId}/win`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({browser_id: getBrowserId(), winner})
+    }).catch(err => console.error('Error saving win:', err))
+  }
+
   powerUpDrop(bombNumber){
-    this.randomDropChance = Math.floor(Math.random() * 10)
-    if (bombNumber === 1) {
-      this.dropChance = 0.9
-    }
-    if(this.randomDropChance <= this.dropChance * 10) {
-      return true
-    }
-    else {
-      return false
-    }
-    this.dropChance = 0.3
+    return Math.random() < this.dropChance
   }
   
   powerUpType() {
-    this.randomPowerUpChance = Math.floor(Math.random() * 100)
-    if(this.randomPowerUpChance <= this.powerUpOne * 100 && this.randomPowerUpChance > this.powerUpTwo * 100) {
-      return 0
-    }
-    else if(this.randomPowerUpChance <= this.powerUpTwo * 100 && this.randomPowerUpChance > this.powerUpThree * 100) {
-      return 1
-    }
-    else if(this.randomPowerUpChance <= this.powerUpThree * 100) {
-      return 2
-    }
+    const r = Math.random()
+    if (r < this.powerUpOne) return 0                       
+    if (r < this.powerUpOne + this.powerUpTwo) return 1    
+    return 2
   }
 
   powerUpPickUp(player, powerUp) {
@@ -774,10 +861,10 @@ function setLimits(a){
           if (player.bombs < this.maxBombNumber + this.extraBombNumber) {
             player.bombs++
             if (player.bombs > this.maxBombNumber) {
-              player.HUD.bombHUD.fill.create(player.HUD.bombHUD.fill.getChildren().slice(-1)[0].x + ((player.number === 2 ? -1 * sizes.tileSize : sizes.tileSize) / 1.5 + (player.number === 2 ? -2 : 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(player.bombs)).setOrigin(0, 0).setScale(0.75)
+              this.addHudIcon(player, player.HUD.bombHUD.fill, this.nextBombHudX(player), player.HUD.bombY, 'bomb_hp', this.BombType(player.bombs))
             }
             else if (player.bombs <= this.maxBombNumber) {
-              player.HUD.bombHUD.fill.create(player.HUD.bombHUD.empty.getChildren().slice(-1)[0].x, 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', this.BombType(player.bombs)).setOrigin(0, 0).setScale(0.75)
+              this.addHudIcon(player, player.HUD.bombHUD.fill, player.HUD.bombHUD.empty.getChildren().slice(-1)[0].x, player.HUD.bombY, 'bomb_hp', this.BombType(player.bombs))
               this.emptyBombDestroy(player)
             }
           }
@@ -791,10 +878,10 @@ function setLimits(a){
           const bombNumberDifference = player.bombs - lastBombNumber
           for (let i = 0; i < bombNumberDifference; i++) {
             if (player.HUD.bombHUD.empty.getChildren().length === 0) {
-              player.HUD.bombHUD.fill.create(player.HUD.bombHUD.fill.getChildren().slice(-1)[0].x + ((player.number === 2 ? -1 * sizes.tileSize : sizes.tileSize) / 1.5 + (player.number === 2 ? -2 : 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 2).setOrigin(0, 0).setScale(0.75)
+              this.addHudIcon(player, player.HUD.bombHUD.fill, this.nextBombHudX(player), player.HUD.bombY, 'bomb_hp', 2)
             }
             else if (player.HUD.bombHUD.empty.getChildren().length > 0) {
-              player.HUD.bombHUD.fill.create(player.HUD.bombHUD.empty.getChildren().slice(-1)[0].x, 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+              this.addHudIcon(player, player.HUD.bombHUD.fill, player.HUD.bombHUD.empty.getChildren().slice(-1)[0].x, player.HUD.bombY, 'bomb_hp', 0)
               this.emptyBombDestroy(player)
             }
           }
@@ -808,10 +895,10 @@ function setLimits(a){
           const bombNumberDifference = player.bombs - lastBombNumber
           for (let i = 0; i < bombNumberDifference; i++) {
             if (player.HUD.bombHUD.empty.getChildren().length === 0) {
-              player.HUD.bombHUD.fill.create(player.HUD.bombHUD.fill.getChildren().slice(-1)[0].x + ((player.number === 2 ? -1 * sizes.tileSize : sizes.tileSize) / 1.5 + (player.number === 2 ? -2 : 2)), 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 2).setOrigin(0, 0).setScale(0.75)
+              this.addHudIcon(player, player.HUD.bombHUD.fill, this.nextBombHudX(player), player.HUD.bombY, 'bomb_hp', 2)
             }
             else if (player.HUD.bombHUD.empty.getChildren().length > 0) {
-              player.HUD.bombHUD.fill.create(player.HUD.bombHUD.empty.getChildren().slice(-1)[0].x, 5 + sizes.tileSize / 1.5 + 2, 'bomb_hp', 0).setOrigin(0, 0).setScale(0.75)
+              this.addHudIcon(player, player.HUD.bombHUD.fill, player.HUD.bombHUD.empty.getChildren().slice(-1)[0].x, player.HUD.bombY, 'bomb_hp', 0)
               this.emptyBombDestroy(player)
             }
           }
@@ -820,67 +907,58 @@ function setLimits(a){
         return player.bombs
   }
 
-  powerUpPutRandomly(player){
-    this.time.delayedCall(0, () => {
-      let possibleTile = []
-      for (let i = 1; i <= 2; i++){
-        if (calculateCordinateX(Math.floor(player.skin.x)) + i <= sizes.mapSize - 2 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) + i][calculateCordinateY(Math.floor(player.skin.y))] == 0){
-          possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) + i, y: calculateCordinateY(Math.floor(player.skin.y))})
-        }
-
-        if (calculateCordinateX(Math.floor(player.skin.x)) - i >= 0 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) - i][calculateCordinateY(Math.floor(player.skin.y))] == 0){
-          possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) - i, y: calculateCordinateY(Math.floor(player.skin.y))})
-        }
-
-        if (calculateCordinateY(Math.floor(player.skin.y)) + i <= sizes.mapSize - 2 && this.mapData[calculateCordinateX(Math.floor(player.skin.x))][calculateCordinateY(Math.floor(player.skin.y)) + i] == 0){
-          possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)), y: calculateCordinateY(Math.floor(player.skin.y)) + i})
-        }
-
-        if (calculateCordinateY(Math.floor(player.skin.y)) - i >= 0 && this.mapData[calculateCordinateX(Math.floor(player.skin.x))][calculateCordinateY(Math.floor(player.skin.y)) - i] == 0){
-          possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)), y: calculateCordinateY(Math.floor(player.skin.y)) - i})
-        }
-        
-      }
-
-      for (let i = 1; i <= 2; i++){
-        for (let j = 1; j <= i; j++){
-          if (calculateCordinateX(Math.floor(player.skin.x)) + i <= sizes.mapSize - 2 && calculateCordinateY(Math.floor(player.skin.y)) + j <= sizes.mapSize - 2 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) + i][calculateCordinateY(Math.floor(player.skin.y)) + j] == 0){
-            possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) + i, y: calculateCordinateY(Math.floor(player.skin.y)) + j})
-          }
-
-          if (calculateCordinateX(Math.floor(player.skin.x)) + i <= sizes.mapSize - 2 && calculateCordinateY(Math.floor(player.skin.y)) - j >= 0 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) + i][calculateCordinateY(Math.floor(player.skin.y)) - j] == 0){
-            possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) + i, y: calculateCordinateY(Math.floor(player.skin.y)) - j})
-          }
-
-          if (calculateCordinateX(Math.floor(player.skin.x)) - i <= 0 && calculateCordinateY(Math.floor(player.skin.y)) + j <= sizes.mapSize - 2 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) - i][calculateCordinateY(Math.floor(player.skin.y)) + j] == 0){
-            possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) - i, y: calculateCordinateY(Math.floor(player.skin.y)) + j})
-          }
-
-          if (calculateCordinateX(Math.floor(player.skin.x)) - i <= 0 && calculateCordinateY(Math.floor(player.skin.y)) - j >= 0 && this.mapData[calculateCordinateX(Math.floor(player.skin.x)) - i][calculateCordinateY(Math.floor(player.skin.y)) - j] == 0){
-            possibleTile.push({ x: calculateCordinateX(Math.floor(player.skin.x)) - i, y: calculateCordinateY(Math.floor(player.skin.y)) - j})
-          }
-        }
-      }
-
-      /*this.powerUps.getChildren().forEach(powerUp => {
-        for (let i = 0; i < possibleTile.length; i++) {
-          if (powerUp.x === calculateCordinateXpx(possibleTile[i].x) && powerUp.y === calculateCordinateYpx(possibleTile[i].y)) {
-            possibleTile.splice(i, 1)
-          }
-        }
+  powerUpPutRandomly(player, enemy){
+      this.powerUps.getChildren().forEach(powerUp =>
+        {if (powerUp.getData('owner') === player.number) {return}
       })
 
-      if (player.bombs === 0){
+      let possibleTile = []
+      const range = 2
+      const px = calculateCordinateX(player.skin.x)
+      const py = calculateCordinateY(player.skin.y)
+      const ex = calculateCordinateX(enemy.skin.x)
+      const ey = calculateCordinateY(enemy.skin.y)
+
+      for (let tilex = -range; tilex <= range; tilex++){
+        for (let tiley = -range; tiley <= range; tiley++){
+          if (py + tiley > 0 && py + tiley < sizes.mapSize - 1 && px + tilex > 0 && px + tilex < sizes.mapSize - 1) 
+            if(this.mapData[py + tiley][px + tilex] == 0){
+              possibleTile.push({x: px + tilex, y: py + tiley})
+            }
+        }
+      }
+
+      const aiBomb = player.bomb ? {x: calculateCordinateX(player.bomb.x), y: calculateCordinateY(player.bomb.y)} : false
+      const enemyBomb = enemy.bomb ? {x: calculateCordinateX(enemy.bomb.x), y: calculateCordinateY(enemy.bomb.y)} : false
+    
+      
+      possibleTile = possibleTile.filter(tile =>
+        !(aiBomb && aiBomb.x === tile.x && aiBomb.y === tile.y) &&
+        !(enemyBomb && enemyBomb.x === tile.x && enemyBomb.y === tile.y) &&
+        !(px == tile.x && py == tile.y) &&
+        !(ex == tile.x && ey == tile.y)
+      )
+
+      if (this.powerUps != undefined || this.powerUps != null)
+      {
+        possibleTile = possibleTile.filter(tile => 
+          !this.powerUps.getChildren().some(obj => 
+          calculateCordinateX(obj.x) === tile.x &&
+          calculateCordinateY(obj.y) === tile.y)
+        )
+      }
+
+      if (possibleTile.length === 0) return
+      else {
         const tile = Phaser.Utils.Array.GetRandom(possibleTile)
-        console.log("Tile: " + tile.x + " " + tile.y)
-        this.powerUps.create(calculateCordinateXpx(tile.x), calculateCordinateYpx(tile.y), 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
-                this.powerUps.getChildren().forEach(powerUp => {
+        const powerUp = this.powerUps.create(calculateCordinateXpx(tile.x), calculateCordinateYpx(tile.y), 'bomb_powerup', this.powerUpType()).setOrigin(0, 0)
+        powerUp.setData('owner', player.number)
+        this.powerUps.getChildren().forEach(powerUp => {
                   powerUp.body.setImmovable(true)
                   powerUp.body.allowGravity = false
                 })
-      }*/
-      player.bombEmpty = true
-    })
+      }
+      console.log(possibleTile)
   }
 
   bombHit(player, enemyPlayer){
@@ -904,6 +982,7 @@ function setLimits(a){
   }
 
   blastRange(player){
+    if (player.bomb == null || player.bomb == undefined) {return true}
     let blastTiles = []
     let inRange = 0
     let bombx = calculateCordinateX(player.bomb.x)
@@ -911,19 +990,19 @@ function setLimits(a){
     let right = 0, left = 0, up = 0, down = 0
 
     for (let i = 1; i <= this.explosionSize; i++) {
-      if (right === 0 && this.mapData[bomby][bombx + i] != 1){
+      if (right === 0 && this.tileAt(bombx + i, bomby) != 1){
         blastTiles.push({x: bombx + i , y: bomby})
       }else {right = 1}
 
-      if (left === 0 && this.mapData[bomby][bombx - i] != 1){
+      if (left === 0 && this.tileAt(bombx - i, bomby) != 1){
         blastTiles.push({x: bombx - i , y: bomby})
       }else {left = 1}
 
-      if (down === 0 && this.mapData[bomby + i][bombx] != 1){
+      if (down === 0 && this.tileAt(bombx, bomby + i) != 1){
         blastTiles.push({x: bombx, y: bomby + i})
       }else {down = 1}
 
-      if (up === 0 && this.mapData[bomby - i][bombx] != 1){
+      if (up === 0 && this.tileAt(bombx, bomby - i) != 1){
         blastTiles.push({x: bombx, y: bomby - i})
       }else {up = 1}
     }
@@ -1001,7 +1080,7 @@ function setLimits(a){
 
   emptyBomb(player, lastBomb) {
     if (player.bombs <= this.maxBombNumber && player.bombs > 0) {
-      player.HUD.bombHUD.empty.create(lastBomb.x, lastBomb.y, 'bomb_hp', 1).setOrigin(0, 0).setScale(0.75)
+      this.addHudIcon(player, player.HUD.bombHUD.empty, lastBomb.x, lastBomb.y, 'bomb_hp', 1)
     }
   }
 

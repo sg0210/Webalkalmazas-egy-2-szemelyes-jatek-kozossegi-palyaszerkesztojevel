@@ -1,3 +1,4 @@
+import { getBrowserId, API_URL } from "./browserId"
 import Phaser from "phaser";
 import { sizes } from "./gameScene";
 
@@ -17,10 +18,10 @@ export class LandScene extends Phaser.Scene {
         this.playButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 - 45, 175, 50, '▶  START', 'MapSelect', '0x15C936', '0x087C22')
         this.editorButton = this.navigateButton(sizes.screenWidth/2, sizes.screenHeight/2 + 25, 175, 50, '⚒  EDITOR', 'MapManagment', '0x079EE5', '0x05689C')
 
-        fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/users', {
+        fetch(`${API_URL}/users`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ browser_id: this.getORcreatedID() })
+            body: JSON.stringify({ browser_id: getBrowserId() })
         })
         .then(res => res.json())
         .then(data => console.log('Player Saved:', data))
@@ -78,15 +79,5 @@ export class LandScene extends Phaser.Scene {
         button.on('pointerdown', () => {this.scene.start(scene)})
     }
 
-    getORcreatedID() {
-        let id = localStorage.getItem('browser_id')
-
-        if (!id) {
-            const fingerprint = navigator.userAgent + navigator.language + screen.width
-            id = btoa(fingerprint).slice(0, 24)
-            localStorage.setItem('browser_id', id) 
-        }
-        return id;
-    }
 
 }

@@ -1,3 +1,4 @@
+import { getBrowserId, API_URL } from "./browserId"
 import Phaser from "phaser";
 import { calculateCordinateX, calculateCordinateY, sizes } from "./gameScene";
 import { LandScene } from "./landScene";
@@ -27,8 +28,11 @@ export class MapEditor extends Phaser.Scene {
     }
 
     init(data){
-        //Alap pálya létrehozása vagy betöltése
-        if (data.mapData === undefined || data.mapData === null ){
+        this.allData = undefined
+        if (data.testMap) {
+            this.mapData = data.testMap
+            this.allData = data.mapData
+        }else if (data.mapData === undefined || data.mapData === null ){
             this.mapData = [
                 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -60,20 +64,24 @@ export class MapEditor extends Phaser.Scene {
             frameWidth: sizes.tileSize,
             frameHeight: sizes.tileSize
         })
-    
+
+        //HUD és gombok
+        this.load.image("editor_hud_bg", "assets/map_counter_bg.png")
+        this.load.image("editor_button", "assets/button.png")
     }
 
     create() {
 
-        //Választható blockok
-        this.nondestroyableblock = this.add.sprite(sizes.screenWidth/2-sizes.tileSize, 25, "tiles", 1)
-        this.nondestroyableblock.setInteractive()
+        //HUD háttér
+        this.add.nineslice(0, 0, "editor_hud_bg", null, sizes.screenWidth, 50, 13, 13, 13, 13).setOrigin(0, 0)
 
-        this.destroyableblock = this.add.sprite(sizes.screenWidth/2+sizes.tileSize, 25, "tiles", 2)
-        this.destroyableblock.setInteractive()
+        //Választható blockok (bal oldalon)
+        const tileMargin = 10, tileGap = 10, tileY = 25
+        const tileX = (i) => tileMargin + sizes.tileSize / 2 + i * (sizes.tileSize + tileGap)
 
-        this.groundblock = this.add.sprite(this.nondestroyableblock.x - (2 * sizes.tileSize), 25, "tiles", 0)
-        this.groundblock.setInteractive()
+        this.groundblock = this.createTileButton(tileX(0), tileY, 0)
+        this.nondestroyableblock = this.createTileButton(tileX(1), tileY, 1)
+        this.destroyableblock = this.createTileButton(tileX(2), tileY, 2)
 
         const map = this.make.tilemap({
             tileHeight: sizes.tileSize,
@@ -98,48 +106,26 @@ export class MapEditor extends Phaser.Scene {
         this.focus = this.add.graphics()
         this.selectedBlock = null
 
-        //Pálya mentése
-        const saveButton = this.add.text(sizes.screenWidth - 75, 10, 'Save', {
-            fontFamily: 'Arial',
-            fontSize: '20px',
-            color: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 10, y: 5 }
-        })
+        //Gombok (jobb oldalon)
+        const buttonHeight = 38, buttonY = 25, margin = 10
+        const saveWidth = 80, publishWidth = 100, deleteWidth = 90
 
-        const publishButton = this.add.text(sizes.screenWidth - 175, 10, 'Publish', {
-            fontFamily: 'Arial',
-            fontSize: '20px',
-            color: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 10, y: 5 }
-        })
+        const saveX = sizes.screenWidth - margin - saveWidth / 2
+        const publishX = saveX - saveWidth / 2 - margin - publishWidth / 2
+        const deleteX = publishX - publishWidth / 2 - margin - deleteWidth / 2
 
-        const deleteButton = this.add.text(15, 10, 'Delete', {
-            fontFamily: 'Arial',
-            fontSize: '20px',
-            color: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 10, y: 5 }
-        })
-
-        deleteButton.setInteractive({useHandCursor: true}).on('pointerdown', ()=> {
+        this.createButton(deleteX, buttonY, deleteWidth, buttonHeight, 'Delete', () => {
             this.onDelete(this.allData[0].id)
             this.scene.start('MapManagment')
         })
 
-        saveButton.setInteractive({useHandCursor: true})
-        saveButton.on('pointerdown', () => {
-            saveButton.setStyle({backgroundColor: "#555555"})
-            this.onSave(this.mapData, 0)
-            //this.scene.start('MapManagment')
-        })
-
-        publishButton.setInteractive({useHandCursor: true})
-        publishButton.on('pointerdown', () => {
-            publishButton.setStyle({backgroundColor: "#555555"})
+        this.createButton(publishX, buttonY, publishWidth, buttonHeight, 'Publish', () => {
             this.onSave(this.mapData, 1)
             this.scene.switch('MapManagment')
+        })
+
+        this.createButton(saveX, buttonY, saveWidth, buttonHeight, 'Save', () => {
+            this.onSave(this.mapData, 0)
         })
         
         this.keyEsc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
@@ -153,21 +139,6 @@ export class MapEditor extends Phaser.Scene {
         }
 
         //console.log(calculateCordinateX(pointer.x),calculateCordinateSmallerY(pointer.y))
-
-        this.nondestroyableblock.on('pointerdown', () => {
-            this.selectedBlock = this.nondestroyableblock
-            this.follower = this.nondestroyableblock.frame.name
-        })
-
-        this.destroyableblock.on('pointerdown', () => {
-            this.selectedBlock = this.destroyableblock
-            this.follower = this.destroyableblock.frame.name
-        })
-
-        this.groundblock.on('pointerdown', () => {
-            this.selectedBlock = this.groundblock
-            this.follower = this.groundblock.frame.name
-        })
 
         if (this.crusorDown == true && !pointer.isDown) {
             this.crusorDown = false
@@ -195,6 +166,40 @@ export class MapEditor extends Phaser.Scene {
             this.scene.launch('MenuScene', this.data.mapData)
             this.registry.set('previousScene', 'MapEditor')
         }
+    }
+
+    createTileButton(x, y, frame) {
+        const tile = this.add.sprite(x, y, "tiles", frame)
+        tile.setInteractive({useHandCursor: true})
+
+        tile.on('pointerover', () => tile.setScale(0.95))
+        tile.on('pointerout', () => tile.setScale(1))
+        tile.on('pointerdown', () => {
+            this.selectedBlock = tile
+            this.follower = frame
+        })
+
+        return tile
+    }
+
+    createButton(x, y, width, height, text, onClick) {
+        const bg = this.add.nineslice(0, 0, "editor_button", null, width, height, 13, 13, 13, 13)
+        const label = this.add.text(0, 0, text, {
+            fontFamily: '"Arial Black"',
+            fontSize: '16px',
+            fill: '#f7f4df',
+            stroke: '#14202a',
+            strokeThickness: 4
+        }).setOrigin(0.5)
+
+        const button = this.add.container(x, y, [bg, label]).setSize(width, height)
+        button.setInteractive({useHandCursor: true})
+
+        button.on('pointerover', () => button.setScale(0.95))
+        button.on('pointerout', () => button.setScale(1))
+        button.on('pointerdown', onClick)
+
+        return button
     }
 
     exportMap() {
@@ -332,33 +337,35 @@ export class MapEditor extends Phaser.Scene {
 
     canPlaceTile(pointer, type) {
         this.crusorDown = true
-        if (this.cornerSpawn(pointer.x, pointer.y) === false) return false, this.showNotification("You can't place blocks in the corners!", 2000) 
-        if (this.sideoftheMap(pointer.x, pointer.y) === false) return false, this.showNotification("You can't place blocks on the edges!", 2000)
-        if (this.isSameTileType(pointer.x, pointer.y, type) === false) return false, this.showNotification("You can't place blocks of the same type!", 2000)
+        if (this.cornerSpawn(pointer.x, pointer.y) === false) {
+            this.showNotification("You can't place blocks in the corners!", 2000)
+            return false
+        }
+        if (this.sideoftheMap(pointer.x, pointer.y) === false) {
+            this.showNotification("You can't place blocks on the edges!", 2000)
+            return false
+        }
+        if (this.isSameTileType(pointer.x, pointer.y, type) === false) {
+            this.showNotification("You can't place blocks of the same type!", 2000)
+            return false
+        }
         if (type === 1) {
-            if (this.reachAllWalkableTiles(pointer, type) !== true) return false, this.showNotification("You can't place blocks that would close off the map!", 2000)
+            if (this.reachAllWalkableTiles(pointer, type) !== true) {
+                this.showNotification("You can't place blocks that would close off the map!", 2000)
+                return false
+            }
         }
             return true
     }
 
-    getORcreatedID() {
-            let id = localStorage.getItem('browser_id')
-    
-            if (!id) {
-                const fingerprint = navigator.userAgent + navigator.language + screen.width
-                id = btoa(fingerprint).slice(0, 24)
-                localStorage.setItem('browser_id', id) 
-            }
-            return id;
-        }
     
     onSave(mapData, publish){
         this.game.renderer.snapshotArea(0, 50, 512, 512, (image) => {
             const mapString = JSON.stringify(mapData)
-            const browser_id = this.getORcreatedID()
+            const browser_id = getBrowserId()
 
             if (this.allData[0] == undefined){
-                fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/insert', {
+                fetch(`${API_URL}/maps/insert`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ browser_id: browser_id, map_json: mapString, published: publish, modified_date: new Date(), title: "teszt", picture: image.src })
@@ -368,7 +375,7 @@ export class MapEditor extends Phaser.Scene {
                 this.time.delayedCall(1000, () => this.scene.start('MapManagment')))
                 .catch(err => console.error('Error:', err))
             }else{
-                fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/update', {
+                fetch(`${API_URL}/maps/update`, {
                     method: 'PUT',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ id: this.allData[0].id, browser_id: browser_id, map_json: mapString, published: publish, modified_date: new Date(), title: "teszt", picture: image.src })
@@ -382,7 +389,7 @@ export class MapEditor extends Phaser.Scene {
 
     async onDelete(id){
         try{ 
-            const response = await fetch(`https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/${id}`, {
+            const response = await fetch(`${API_URL}/maps/${id}`, {
                     method: 'DELETE',
                     headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')},
                     //body: JSON.stringify({ id: this.allData[0].id })

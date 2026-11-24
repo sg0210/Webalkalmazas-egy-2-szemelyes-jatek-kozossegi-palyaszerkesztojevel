@@ -1,3 +1,4 @@
+import { API_URL } from "./browserId"
 import Phaser from "phaser"
 import { sizes } from "./gameScene"
 
@@ -21,7 +22,7 @@ export class MapSelect extends Phaser.Scene {
 
     async create(){
 
-        const response = await fetch('https://refactored-spoon-g4x794pgg4pvfprp-3000.app.github.dev/maps/published', {
+        const response = await fetch(`${API_URL}/maps/published`, {
             method: 'GET'
         })
 
@@ -97,7 +98,7 @@ export class MapSelect extends Phaser.Scene {
         const playButton = this.buttonDesign(((bg.width - (bg.width - 40)) / 2), title.y + title.height + 13, bg.width - 40)
         playButton.on('pointerover', () => {playButton.setScale(0.95)})
         playButton.on('pointerout', () => {playButton.setScale(1)})
-        playButton.on('pointerdown', () => this.onPlay(map.mapJson))
+        playButton.on('pointerdown', () => this.onPlay(map))
 
         card.add([picture, bg, title, id, playButton])
         return card
@@ -118,8 +119,8 @@ export class MapSelect extends Phaser.Scene {
         return buttonContainer
     }
 
-    async onPlay(mapJson){
-        this.scene.start('PlayerSelectScene', {mapData: mapJson})
+    async onPlay(map){
+        this.scene.start('MapRatingScene', {map})
     }
 
     mainButtonDesign(x, y, width, heigth, text, scene) {

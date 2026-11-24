@@ -24,18 +24,23 @@ export class MenuScene extends Phaser.Scene {
         this.menu = this.add.container(sizes.screenWidth/2, sizes.screenHeight/2)
 
         this.menuBG = this.add.nineslice(0, 0, "menu_bg", null, 220, 220, 13, 13, 13, 13)
-        this.buttonResume = this.navigateButton(0, defaultY + 10, butH, 'Resume', 'MenuScene', false, previousScene, false)
-        this.buttonExit = this.navigateButton(0, defaultY + h - butH - 10, butH, 'Exit', previousScene, 'LandScene', false, false)
+        this.buttonResume = this.navigateButton(0, defaultY + 10, butH, 'Resume', () => {
+            this.scene.stop()
+            this.scene.run(previousScene)
+        })
+        this.buttonExit = this.navigateButton(0, defaultY + h - butH - 10, butH, 'Exit', () => this.exit(previousScene))
         this.menu.setSize(this.menuBG.width, this.menuBG.height)
         this.menu.add([this.menuBG, this.buttonResume, this.buttonExit])
         
     
-         if (this.registry.get('previousScene') === 'GameScene'){
-            this.buttonRestart = this.navigateButton(0, this.buttonResume.y + this.buttonResume.height + 10, butH, 'Restart', false, 'GameScene', false, false)
+        if (previousScene === 'GameScene'){
+            this.buttonRestart = this.navigateButton(0, this.buttonResume.y + this.buttonResume.height + 10, butH, 'Restart', () => {
+                this.scene.start('GameScene')
+            })
             this.menu.add([this.buttonRestart])
         }
-        if (this.registry.get('previousScene') === 'MapEditor'){
-            this.buttonTest = this.navigateButton(0, this.buttonResume.y + this.buttonResume.height + 10, butH, 'Test', 'MapEditor', 'GameScene', false, false)
+        if (previousScene === 'MapEditor'){
+            this.buttonTest = this.navigateButton(0, this.buttonResume.y + this.buttonResume.height + 10, butH, 'Test', () => this.testMap())
             this.menu.add([this.buttonTest])
         }
         console.log(this.registry.get('previousScene'))
@@ -44,7 +49,7 @@ export class MenuScene extends Phaser.Scene {
     update() {
     }
 
-    navigateButton(x, y, height, text, stopScene, startScene, resumeScene, switchScene) {
+    navigateButton(x, y, height, text, onClick) {
         const bg = this.add.nineslice(0, 0, "button_bg", null, 180, height, 13, 13, 13, 13)
         const label = this.add.text(0, 0, text, {fontFamily: '"Arial Black"', fill: '#f7f4df', fontSize: '20px', stroke: '#14202a',
         strokeThickness: 5}).setOrigin(0.5)
@@ -54,14 +59,33 @@ export class MenuScene extends Phaser.Scene {
 
         button.on('pointerover', () => {button.setScale(0.95)})
         button.on('pointerout', () => {button.setScale(1)})
-        button.on('pointerdown', () => {if (stopScene != false){this.scene.stop(stopScene)}
-                                        if (startScene != false){this.scene.start(startScene)}
-                                        else if (switchScene === 'MapEditor'){this.scene.start(switchScene, this.mapData, numberOfPlayers = 1)}
-                                        if (resumeScene != false){this.scene.run(resumeScene)}
-                                        if (switchScene != false) {this.scene.start(switchScene)}})
+        button.on('pointerdown', onClick)
 
         return button
     }
 
-    
+    testMap() {
+        const editor = this.scene.get('MapEditor')
+        const editorTest = {
+            map: structuredClone(editor.mapData),
+            allData: editor.allData
+        }
+        this.scene.stop('MapEditor')
+        this.scene.start('GameScene', {
+            numberOfPlayers: 1,
+            mapData: JSON.stringify(editorTest.map),
+            editorTest: editorTest
+        })
+    }
+
+    exit(previousScene) {
+        const editorTest = previousScene === 'GameScene' ? this.scene.get('GameScene').editorTest : null
+        this.scene.stop(previousScene)
+        if (editorTest) {
+            //Teszt játékból vissza a szerkesztőbe ugyanazzal a pályával
+            this.scene.start('MapEditor', { testMap: editorTest.map, mapData: editorTest.allData })
+        } else {
+            this.scene.start('LandScene')
+        }
+    }
 }
